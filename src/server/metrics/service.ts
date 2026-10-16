@@ -15,6 +15,7 @@ import type {
   EventRecord,
   LoginResult,
   Overview,
+  PageDayRecord,
   Repo,
   SiteRecord,
   SiteSummary,
@@ -23,6 +24,12 @@ import type {
 } from "./types";
 
 const RATE_LIMIT = 60;
+
+export function pagePath(raw: string): string {
+  const withoutQuery = raw.split("?")[0]?.split("#")[0]?.trim() ?? "";
+  if (!withoutQuery) return "/";
+  return withoutQuery.startsWith("/") ? withoutQuery : `/${withoutQuery}`;
+}
 
 function readObject(raw: unknown): Record<string, unknown> | null {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
@@ -162,13 +169,35 @@ export async function loadOverview(repo: Repo, siteKey: string, now = new Date()
     uniques: byDate.get(date)?.uniques ?? 0,
   }));
   const today = days[days.length - 1] ?? { pageviews: 0, uniques: 0 };
+  const from = dates[0] ?? "";
+  const to = dates[dates.length - 1] ?? "";
+  const pageRows = from && to ? await repo.listPageDays(siteKey, from, to) : [];
   return {
     site,
     todayPageviews: today.pageviews,
     todayUniques: today.uniques,
     last7Pageviews: days.reduce((sum, day) => sum + day.pageviews, 0),
     days,
+    pageDays: groupPageDays(dates, pageRows),
   };
+}
+
+function groupPageDays(
+  dates: string[],
+  rows: PageDayRecord[],
+): Overview["pageDays"] {
+  const grouped = new Map<string, Array<{ path: string; pageviews: number }>>();
+  for (const row of rows) {
+    const pages = grouped.get(row.date) ?? [];
+    pages.push({ path: row.path, pageviews: row.pageviews });
+    grouped.set(row.date, pages);
+  }
+  return [...dates].reverse().flatMap((date) => {
+    const pages = grouped.get(date);
+    if (!pages || pages.length === 0) return [];
+    pages.sort((a, b) => b.pageviews - a.pageviews || a.path.localeCompare(b.path));
+    return [{ date, pages }];
+  });
 }
 
 const MARKS = new Set(["valid", "review", "invalid"]);
@@ -325,6 +354,7 @@ export async function collectEvent(repo: Repo, raw: unknown, meta: CollectMeta):
   if (!existing) site.visitorCount += 1;
   await repo.putSite(site);
   await repo.addDaily(siteKey, today, 1, countUnique ? 1 : 0, ttlAfter(DAILY_TTL_DAYS, now));
+  await repo.addPageDay(siteKey, today, pagePath(path), 1, ttlAfter(DAILY_TTL_DAYS, now));
   return { ok: true };
 }
 

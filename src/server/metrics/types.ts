@@ -56,6 +56,14 @@ export type DailyRecord = {
   ttl: number;
 };
 
+export type PageDayRecord = {
+  siteKey: string;
+  date: string;
+  path: string;
+  pageviews: number;
+  ttl: number;
+};
+
 export type SiteSummary = SiteRecord & {
   todayPageviews: number;
   todayUniques: number;
@@ -67,6 +75,7 @@ export type Overview = {
   todayUniques: number;
   last7Pageviews: number;
   days: Array<{ date: string; pageviews: number; uniques: number }>;
+  pageDays: Array<{ date: string; pages: Array<{ path: string; pageviews: number }> }>;
 };
 
 export type VisitorDetail = {
@@ -108,4 +117,6 @@ export interface Repo {
   listVisitors(siteKey: string, limit: number): Promise<VisitorRecord[]>;
   addDaily(siteKey: string, date: string, pageviews: number, uniques: number, ttl: number): Promise<void>;
   getDailies(siteKey: string, dates: string[]): Promise<DailyRecord[]>;
+  addPageDay(siteKey: string, date: string, path: string, pageviews: number, ttl: number): Promise<void>;
+  listPageDays(siteKey: string, from: string, to: string): Promise<PageDayRecord[]>;
 }

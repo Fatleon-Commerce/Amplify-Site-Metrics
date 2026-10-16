@@ -10,6 +10,7 @@ import {
   loadDetail,
   loadOverview,
   loginWithPassword,
+  pagePath,
   saveVisitorNote,
 } from "./service";
 import { resetLoginAttempts, signToken, verifyToken } from "./token";
@@ -153,6 +154,30 @@ test("a new visit is counted after a 30 minute gap and on the next day", async (
   assert.equal(summaries[0]?.todayPageviews, 1);
   const todayOverview = await loadOverview(repo, siteKey, NOW);
   assert.equal(todayOverview?.todayPageviews, 2);
+});
+
+test("page counts merge query strings and split by day", async () => {
+  assert.equal(pagePath("/shop?utm_source=bing"), "/shop");
+  assert.equal(pagePath(""), "/");
+
+  const repo = new MemoryRepo();
+  const siteKey = await site(repo);
+  await collectEvent(repo, view("event0001", { siteKey, path: "/shop?utm_source=bing" }), { now: NOW });
+  await collectEvent(repo, view("event0002", { siteKey, path: "/shop" }), { now: NOW });
+  await collectEvent(repo, view("event0003", { siteKey, path: "/shop?page=2" }), { now: NOW });
+  const nextDay = new Date("2026-10-16T16:30:00.000Z");
+  await collectEvent(
+    repo,
+    view("event0004", { siteKey, path: "/about/", occurredAt: nextDay.toISOString() }),
+    { now: nextDay },
+  );
+  const overview = await loadOverview(repo, siteKey, nextDay);
+  assert.deepEqual(overview?.pageDays, [
+    { date: "2026-10-17", pages: [{ path: "/about/", pageviews: 1 }] },
+    { date: "2026-10-16", pages: [{ path: "/shop", pageviews: 3 }] },
+  ]);
+  const detail = await loadDetail(repo, siteKey, VISITOR);
+  assert.equal(detail?.events[0]?.path, "/shop?utm_source=bing");
 });
 
 test("unknown sites and bots are ignored", async () => {

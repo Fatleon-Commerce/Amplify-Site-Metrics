@@ -130,7 +130,9 @@ export function VisitorTable({ visitors }: { visitors: VisitorView[] }) {
                     />
                   </td>
                   <td>
-                    <Link href={visitor.href}>Path</Link>
+                    <Link href={visitor.href} className="button secondary path-btn">
+                      Path
+                    </Link>
                   </td>
                 </tr>
               ))

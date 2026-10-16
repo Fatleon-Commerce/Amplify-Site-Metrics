@@ -1,6 +1,7 @@
 import type {
   DailyRecord,
   EventRecord,
+  PageDayRecord,
   Repo,
   SiteRecord,
   VisitorRecord,
@@ -11,10 +12,11 @@ type Data = {
   visitors: VisitorRecord[];
   events: EventRecord[];
   days: DailyRecord[];
+  pages: PageDayRecord[];
 };
 
 function empty(): Data {
-  return { sites: [], visitors: [], events: [], days: [] };
+  return { sites: [], visitors: [], events: [], days: [], pages: [] };
 }
 
 export class MemoryRepo implements Repo {
@@ -121,5 +123,19 @@ export class MemoryRepo implements Repo {
   async getDailies(siteKey: string, dates: string[]): Promise<DailyRecord[]> {
     const wanted = new Set(dates);
     return this.data.days.filter((day) => day.siteKey === siteKey && wanted.has(day.date));
+  }
+
+  async addPageDay(siteKey: string, date: string, path: string, pageviews: number, ttl: number): Promise<void> {
+    const current = this.data.pages.find((page) => page.siteKey === siteKey && page.date === date && page.path === path);
+    if (!current) {
+      this.data.pages.push({ siteKey, date, path, pageviews, ttl });
+      return;
+    }
+    current.pageviews += pageviews;
+    current.ttl = ttl;
+  }
+
+  async listPageDays(siteKey: string, from: string, to: string): Promise<PageDayRecord[]> {
+    return this.data.pages.filter((page) => page.siteKey === siteKey && page.date >= from && page.date <= to);
   }
 }

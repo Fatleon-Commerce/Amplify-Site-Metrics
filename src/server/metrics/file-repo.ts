@@ -3,6 +3,7 @@ import path from "node:path";
 import type {
   DailyRecord,
   EventRecord,
+  PageDayRecord,
   Repo,
   SiteRecord,
   VisitorRecord,
@@ -13,10 +14,11 @@ type Data = {
   visitors: VisitorRecord[];
   events: EventRecord[];
   days: DailyRecord[];
+  pages: PageDayRecord[];
 };
 
 function empty(): Data {
-  return { sites: [], visitors: [], events: [], days: [] };
+  return { sites: [], visitors: [], events: [], days: [], pages: [] };
 }
 
 export class FileRepo implements Repo {
@@ -32,6 +34,7 @@ export class FileRepo implements Repo {
         visitors: (parsed.visitors ?? []).filter((item) => item.ttl > now),
         events: (parsed.events ?? []).filter((item) => item.ttl > now),
         days: (parsed.days ?? []).filter((item) => item.ttl > now),
+        pages: (parsed.pages ?? []).filter((item) => item.ttl > now),
       };
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === "ENOENT") return empty();
@@ -72,6 +75,7 @@ export class FileRepo implements Repo {
     data.visitors = data.visitors.filter((visitor) => visitor.siteKey !== siteKey);
     data.events = data.events.filter((event) => event.siteKey !== siteKey);
     data.days = data.days.filter((day) => day.siteKey !== siteKey);
+    data.pages = data.pages.filter((page) => page.siteKey !== siteKey);
     await this.write(data);
   }
 
@@ -166,5 +170,21 @@ export class FileRepo implements Repo {
     const data = await this.read();
     const wanted = new Set(dates);
     return data.days.filter((day) => day.siteKey === siteKey && wanted.has(day.date));
+  }
+
+  async addPageDay(siteKey: string, date: string, path: string, pageviews: number, ttl: number): Promise<void> {
+    const data = await this.read();
+    const current = data.pages.find((page) => page.siteKey === siteKey && page.date === date && page.path === path);
+    if (!current) data.pages.push({ siteKey, date, path, pageviews, ttl });
+    else {
+      current.pageviews += pageviews;
+      current.ttl = ttl;
+    }
+    await this.write(data);
+  }
+
+  async listPageDays(siteKey: string, from: string, to: string): Promise<PageDayRecord[]> {
+    const data = await this.read();
+    return data.pages.filter((page) => page.siteKey === siteKey && page.date >= from && page.date <= to);
   }
 }

@@ -11,6 +11,7 @@ import {
 import type {
   DailyRecord,
   EventRecord,
+  PageDayRecord,
   Repo,
   SiteRecord,
   VisitorRecord,
@@ -24,6 +25,13 @@ function requiredString(item: Item, key: string): string {
 
 function requiredNumber(item: Item, key: string): number {
   return typeof item[key] === "number" ? item[key] : Number(item[key] ?? 0);
+}
+
+function nextDateKey(date: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
+  if (!match) return date;
+  const next = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]) + 1));
+  return next.toISOString().slice(0, 10);
 }
 
 function siteFrom(item: Item): SiteRecord {
@@ -279,6 +287,45 @@ export class DynamoRepo implements Repo {
       date: requiredString(item, "date") || requiredString(item, "sk"),
       pageviews: requiredNumber(item, "pageviews"),
       uniques: requiredNumber(item, "uniques"),
+      ttl: requiredNumber(item, "ttl"),
+    }));
+  }
+
+  async addPageDay(siteKey: string, date: string, path: string, pageviews: number, ttl: number): Promise<void> {
+    await this.client.send(
+      new UpdateCommand({
+        TableName: this.tableName,
+        Key: { pk: `PAGE#${siteKey}`, sk: `${date}#${path}` },
+        UpdateExpression:
+          "ADD pageviews :pageviews SET siteKey = :siteKey, #date = :date, #path = :path, #ttl = if_not_exists(#ttl, :ttl), entity = :entity",
+        ExpressionAttributeNames: { "#date": "date", "#path": "path", "#ttl": "ttl" },
+        ExpressionAttributeValues: {
+          ":pageviews": pageviews,
+          ":siteKey": siteKey,
+          ":date": date,
+          ":path": path,
+          ":ttl": ttl,
+          ":entity": "page",
+        },
+      }),
+    );
+  }
+
+  async listPageDays(siteKey: string, from: string, to: string): Promise<PageDayRecord[]> {
+    const items = await this.queryAll({
+      TableName: this.tableName,
+      KeyConditionExpression: "pk = :pk AND sk >= :start AND sk < :end",
+      ExpressionAttributeValues: {
+        ":pk": `PAGE#${siteKey}`,
+        ":start": `${from}#`,
+        ":end": `${nextDateKey(to)}#`,
+      },
+    });
+    return items.map((item) => ({
+      siteKey: requiredString(item, "siteKey") || siteKey,
+      date: requiredString(item, "date"),
+      path: requiredString(item, "path"),
+      pageviews: requiredNumber(item, "pageviews"),
       ttl: requiredNumber(item, "ttl"),
     }));
   }
