@@ -70,6 +70,7 @@ function blankVisitor(input: {
     ttl: ttlAfter(EVENT_TTL_DAYS, input.now),
     rateWindowMinute: 0,
     rateCount: 0,
+    note: "",
   };
 }
 
@@ -167,6 +168,22 @@ export async function loadOverview(repo: Repo, siteKey: string, now = new Date()
     last7Pageviews: days.reduce((sum, day) => sum + day.pageviews, 0),
     days,
   };
+}
+
+export async function saveVisitorNote(
+  repo: Repo,
+  siteKey: string,
+  visitorId: string,
+  note: string,
+): Promise<{ ok: true } | { ok: false; status: number; error: string }> {
+  if (!isSiteKey(siteKey) || !isClientId(visitorId)) {
+    return { ok: false, status: 404, error: "Unknown visitor" };
+  }
+  const visitor = await repo.getVisitor(siteKey, visitorId);
+  if (!visitor) return { ok: false, status: 404, error: "Unknown visitor" };
+  visitor.note = note.trim().slice(0, 500);
+  await repo.putVisitor(visitor);
+  return { ok: true };
 }
 
 export async function loadVisitors(repo: Repo, siteKey: string): Promise<VisitorRecord[] | null> {

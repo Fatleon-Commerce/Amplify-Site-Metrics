@@ -9,6 +9,7 @@ import {
   loadVisitors,
   loginWithPassword,
   removeSite,
+  saveVisitorNote,
   tokenIsValid,
 } from "./metrics/service";
 import { AuthError, type MetricsBackend } from "./backend";
@@ -76,6 +77,11 @@ export class FileBackend implements MetricsBackend {
   detail(token: string, siteKey: string, visitorId: string): Promise<VisitorDetail | null> {
     this.assertToken(token);
     return serial(() => loadDetail(this.repo, siteKey, visitorId));
+  }
+
+  saveNote(token: string, siteKey: string, visitorId: string, note: string) {
+    this.assertToken(token);
+    return serial(() => saveVisitorNote(this.repo, siteKey, visitorId, note));
   }
 
   private assertToken(token: string): void {

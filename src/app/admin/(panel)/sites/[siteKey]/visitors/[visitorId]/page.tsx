@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { VisitorNote } from "@/components/VisitorNote";
 import { formatDateTime, formatSpan, regionLabel, sourceLabel } from "@/lib/format";
 import { buildTimeline } from "@/lib/timeline";
 import { isClientId, isSiteKey } from "@/server/metrics/ids";
@@ -37,6 +38,9 @@ export default async function VisitorPage({
         <span>Span {formatSpan(visitor.firstSeenAt, visitor.lastSeenAt)}</span>
         {visitor.ip ? <span>IP {visitor.ip}</span> : null}
       </div>
+      <p className="note-line">
+        <VisitorNote siteKey={detail.site.siteKey} visitorId={visitor.visitorId} note={visitor.note ?? ""} />
+      </p>
       {visitor.firstReferrer ? <p className="muted">Referrer {visitor.firstReferrer}</p> : null}
       {utm ? <p className="muted">UTM {utm}</p> : null}
       <section className="card timeline">

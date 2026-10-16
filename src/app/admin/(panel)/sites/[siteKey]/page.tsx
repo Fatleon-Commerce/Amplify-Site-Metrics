@@ -43,7 +43,10 @@ export default async function SitePage({
     source: sourceLabel(visitor.trafficSource),
     landingPath: visitor.landingPath || "/",
     href: `/admin/sites/${overview.site.siteKey}/visitors/${visitor.visitorId}`,
+    siteKey: overview.site.siteKey,
+    note: visitor.note ?? "",
   }));
+  const daily = [...overview.days].reverse();
 
   return (
     <main className="wrap">
@@ -77,14 +80,37 @@ export default async function SitePage({
         </div>
       </section>
       <section className="card">
-        <div className="bars" aria-label="Pageviews, last 7 days">
-          {overview.days.map((day) => (
-            <div className="bar" key={day.date}>
-              <span>{day.pageviews}</span>
-              <div className="bar-fill" style={{ height: `${Math.max(4, (day.pageviews / max) * 72)}px` }} />
-              <em>{day.date.slice(5)}</em>
-            </div>
-          ))}
+        <h2>Daily summary</h2>
+        <div className="summary-grid">
+          <div className="bars" aria-label="Pageviews, last 7 days">
+            {overview.days.map((day) => (
+              <div className="bar" key={day.date}>
+                <span>{day.pageviews}</span>
+                <div className="bar-fill" style={{ height: `${Math.max(4, (day.pageviews / max) * 72)}px` }} />
+                <em>{day.date.slice(5)}</em>
+              </div>
+            ))}
+          </div>
+          <div className="table-wrap">
+            <table className="daily">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Visitors</th>
+                  <th>Pageviews</th>
+                </tr>
+              </thead>
+              <tbody>
+                {daily.map((day) => (
+                  <tr key={day.date}>
+                    <td>{day.date}</td>
+                    <td>{day.uniques}</td>
+                    <td>{day.pageviews}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </section>
       <VisitorTable visitors={rows} />

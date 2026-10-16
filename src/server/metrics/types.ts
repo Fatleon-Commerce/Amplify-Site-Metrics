@@ -32,6 +32,7 @@ export type VisitorRecord = {
   ttl: number;
   rateWindowMinute: number;
   rateCount: number;
+  note: string;
 };
 
 export type EventRecord = {

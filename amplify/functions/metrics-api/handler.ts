@@ -8,9 +8,10 @@ import {
   loadVisitors,
   loginWithPassword,
   removeSite,
+  saveVisitorNote,
   tokenIsValid,
 } from "../../../src/server/metrics/service";
-import { isSiteKey } from "../../../src/server/metrics/ids";
+import { isClientId, isSiteKey } from "../../../src/server/metrics/ids";
 import type { CollectMeta } from "../../../src/server/metrics/types";
 
 type FunctionUrlEvent = {
@@ -134,6 +135,16 @@ export const handler = async (event: FunctionUrlEvent) => {
       const visitors = await loadVisitors(store(), siteKey);
       if (!visitors) return respond(404, { ok: false, error: "Unknown site" });
       return respond(200, { ok: true, visitors });
+    }
+
+    if (op === "saveNote") {
+      const siteKey = typeof body.siteKey === "string" ? body.siteKey : "";
+      const visitorId = typeof body.visitorId === "string" ? body.visitorId : "";
+      const note = typeof body.note === "string" ? body.note : "";
+      if (!isClientId(visitorId)) return respond(404, { ok: false, error: "Unknown visitor" });
+      const result = await saveVisitorNote(store(), siteKey, visitorId, note);
+      if (!result.ok) return respond(result.status, result);
+      return respond(200, result);
     }
 
     if (op === "detail") {

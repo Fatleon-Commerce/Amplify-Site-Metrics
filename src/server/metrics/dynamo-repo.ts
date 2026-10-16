@@ -63,6 +63,7 @@ function visitorFrom(item: Item): VisitorRecord {
     ttl: requiredNumber(item, "ttl"),
     rateWindowMinute: requiredNumber(item, "rateWindowMinute"),
     rateCount: requiredNumber(item, "rateCount"),
+    note: requiredString(item, "note"),
   };
 }
 

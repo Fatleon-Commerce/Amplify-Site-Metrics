@@ -10,6 +10,7 @@ import {
   loadDetail,
   loadOverview,
   loginWithPassword,
+  saveVisitorNote,
 } from "./service";
 import { resetLoginAttempts, signToken, verifyToken } from "./token";
 import type { Repo } from "./types";
@@ -167,6 +168,21 @@ test("unknown sites and bots are ignored", async () => {
   });
   assert.deepEqual(bot, { ok: true });
   assert.equal(await loadDetail(repo, siteKey, VISITOR), null);
+});
+
+test("a visitor note stays after the next pageview", async () => {
+  const repo = new MemoryRepo();
+  const siteKey = await site(repo);
+  await collectEvent(repo, view("event0001", { siteKey }), { now: NOW });
+  const saved = await saveVisitorNote(repo, siteKey, VISITOR, "  Follow up about the kit  ");
+  assert.equal(saved.ok, true);
+  await collectEvent(repo, view("event0002", { siteKey, path: "/docs" }), { now: NOW });
+  const detail = await loadDetail(repo, siteKey, VISITOR);
+  assert.equal(detail?.visitor.note, "Follow up about the kit");
+  const cleared = await saveVisitorNote(repo, siteKey, VISITOR, "   ");
+  assert.equal(cleared.ok, true);
+  const after = await loadDetail(repo, siteKey, VISITOR);
+  assert.equal(after?.visitor.note, "");
 });
 
 test("traffic source and device labels", () => {

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { VisitorNote } from "./VisitorNote";
 
 export type VisitorView = {
   visitorId: string;
@@ -18,6 +19,8 @@ export type VisitorView = {
   source: string;
   landingPath: string;
   href: string;
+  siteKey: string;
+  note: string;
 };
 
 export function VisitorTable({ visitors }: { visitors: VisitorView[] }) {
@@ -36,6 +39,7 @@ export function VisitorTable({ visitors }: { visitors: VisitorView[] }) {
       visitor.source,
       visitor.landingPath,
       visitor.locale,
+      visitor.note,
     ]
       .join(" ")
       .toLowerCase();
@@ -69,25 +73,23 @@ export function VisitorTable({ visitors }: { visitors: VisitorView[] }) {
             <tr>
               <th>Visitor</th>
               <th>First seen</th>
-              <th>Span</th>
-              <th className="hide-sm">Time on site</th>
-              <th>Visits</th>
-              <th className="hide-sm">Pageviews</th>
+              <th>Activity</th>
               <th>Device</th>
               <th>Region</th>
               <th>Source</th>
               <th>Landing page</th>
+              <th>Note</th>
               <th></th>
             </tr>
           </thead>
           <tbody>
             {visitors.length === 0 ? (
               <tr>
-                <td colSpan={11}>No visits yet. Add the script to a page, then refresh.</td>
+                <td colSpan={9}>No visits yet. Add the script to a page, then refresh.</td>
               </tr>
             ) : filtered.length === 0 ? (
               <tr>
-                <td colSpan={11}>No visitors match this filter.</td>
+                <td colSpan={9}>No visitors match this filter.</td>
               </tr>
             ) : (
               filtered.map((visitor) => (
@@ -99,15 +101,22 @@ export function VisitorTable({ visitors }: { visitors: VisitorView[] }) {
                     {visitor.firstSeen}
                     <span className="sub">Last seen {visitor.lastSeen}</span>
                   </td>
-                  <td>{visitor.spanLabel}</td>
-                  <td className="hide-sm">{visitor.stayLabel}</td>
-                  <td>{visitor.visitCount}</td>
-                  <td className="hide-sm">{visitor.pageCount}</td>
+                  <td>
+                    {visitor.spanLabel}
+                    <span className="sub">
+                      {visitor.stayLabel} on site · {visitor.visitCount}{" "}
+                      {visitor.visitCount === 1 ? "visit" : "visits"} · {visitor.pageCount}{" "}
+                      {visitor.pageCount === 1 ? "pageview" : "pageviews"}
+                    </span>
+                  </td>
                   <td>{visitor.device}</td>
                   <td>{visitor.region}</td>
                   <td>{visitor.source}</td>
                   <td className="path" title={visitor.landingPath}>
                     {visitor.landingPath}
+                  </td>
+                  <td className="note-cell">
+                    <VisitorNote siteKey={visitor.siteKey} visitorId={visitor.visitorId} note={visitor.note} />
                   </td>
                   <td>
                     <Link href={visitor.href}>Path</Link>

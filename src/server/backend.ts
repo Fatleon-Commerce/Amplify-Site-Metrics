@@ -20,6 +20,12 @@ export interface MetricsBackend {
   overview(token: string, siteKey: string): Promise<Overview | null>;
   visitors(token: string, siteKey: string): Promise<VisitorRecord[] | null>;
   detail(token: string, siteKey: string, visitorId: string): Promise<VisitorDetail | null>;
+  saveNote(
+    token: string,
+    siteKey: string,
+    visitorId: string,
+    note: string,
+  ): Promise<{ ok: true } | { ok: false; status: number; error: string }>;
 }
 
 export function metricsApiUrl(): string {
