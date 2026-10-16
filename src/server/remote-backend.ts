@@ -69,8 +69,9 @@ export class RemoteBackend implements MetricsBackend {
   }
 
   async listSites(token: string): Promise<SiteSummary[]> {
-    const { json } = await this.call({ op: "listSites" }, token);
-    return json.sites ?? [];
+    const { status, json } = await this.call({ op: "listSites" }, token);
+    if (status !== 200 || !json.sites) throw new Error(json.error ?? "Could not load sites");
+    return json.sites;
   }
 
   createSite(token: string, name: string) {
@@ -90,19 +91,22 @@ export class RemoteBackend implements MetricsBackend {
   async overview(token: string, siteKey: string): Promise<Overview | null> {
     const { status, json } = await this.call({ op: "overview", siteKey }, token);
     if (status === 404) return null;
-    return json.overview ?? null;
+    if (status !== 200 || !json.overview) throw new Error(json.error ?? "Could not load the site");
+    return json.overview;
   }
 
   async visitors(token: string, siteKey: string): Promise<VisitorRecord[] | null> {
     const { status, json } = await this.call({ op: "visitors", siteKey }, token);
     if (status === 404) return null;
-    return json.visitors ?? null;
+    if (status !== 200 || !json.visitors) throw new Error(json.error ?? "Could not load visitors");
+    return json.visitors;
   }
 
   async detail(token: string, siteKey: string, visitorId: string): Promise<VisitorDetail | null> {
     const { status, json } = await this.call({ op: "detail", siteKey, visitorId }, token);
     if (status === 404) return null;
-    return json.detail ?? null;
+    if (status !== 200 || !json.detail) throw new Error(json.error ?? "Could not load the visitor");
+    return json.detail;
   }
 
   saveNote(token: string, siteKey: string, visitorId: string, note: string, mark: string) {

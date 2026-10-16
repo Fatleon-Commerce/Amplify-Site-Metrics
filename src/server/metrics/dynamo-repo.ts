@@ -314,20 +314,22 @@ export class DynamoRepo implements Repo {
   async listPageDays(siteKey: string, from: string, to: string): Promise<PageDayRecord[]> {
     const items = await this.queryAll({
       TableName: this.tableName,
-      KeyConditionExpression: "pk = :pk AND sk >= :start AND sk < :end",
+      KeyConditionExpression: "pk = :pk AND sk BETWEEN :start AND :end",
       ExpressionAttributeValues: {
         ":pk": `PAGE#${siteKey}`,
         ":start": `${from}#`,
         ":end": `${nextDateKey(to)}#`,
       },
     });
-    return items.map((item) => ({
-      siteKey: requiredString(item, "siteKey") || siteKey,
-      date: requiredString(item, "date"),
-      path: requiredString(item, "path"),
-      pageviews: requiredNumber(item, "pageviews"),
-      ttl: requiredNumber(item, "ttl"),
-    }));
+    return items
+      .map((item) => ({
+        siteKey: requiredString(item, "siteKey") || siteKey,
+        date: requiredString(item, "date"),
+        path: requiredString(item, "path"),
+        pageviews: requiredNumber(item, "pageviews"),
+        ttl: requiredNumber(item, "ttl"),
+      }))
+      .filter((page) => page.date >= from && page.date <= to && page.path);
   }
 
   private async queryAll(input: ConstructorParameters<typeof QueryCommand>[0]): Promise<Item[]> {
