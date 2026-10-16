@@ -14,16 +14,18 @@ export async function POST(request: Request, { params }: { params: { siteKey: st
   }
 
   let note = "";
+  let mark = "";
   try {
-    const body = (await request.json()) as { note?: unknown };
+    const body = (await request.json()) as { note?: unknown; mark?: unknown };
     note = typeof body.note === "string" ? body.note : "";
+    mark = typeof body.mark === "string" ? body.mark : "";
   } catch {
     return NextResponse.json({ error: "Enter a note" }, { status: 400 });
   }
 
   try {
     const backend = await getBackend();
-    const result = await backend.saveNote(token, params.siteKey, params.visitorId, note);
+    const result = await backend.saveNote(token, params.siteKey, params.visitorId, note, mark);
     if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.status });
     return NextResponse.json({ ok: true });
   } catch (error) {

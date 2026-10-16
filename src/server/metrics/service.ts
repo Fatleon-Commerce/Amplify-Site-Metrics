@@ -71,6 +71,7 @@ function blankVisitor(input: {
     rateWindowMinute: 0,
     rateCount: 0,
     note: "",
+    mark: "",
   };
 }
 
@@ -170,11 +171,14 @@ export async function loadOverview(repo: Repo, siteKey: string, now = new Date()
   };
 }
 
+const MARKS = new Set(["valid", "review", "invalid"]);
+
 export async function saveVisitorNote(
   repo: Repo,
   siteKey: string,
   visitorId: string,
   note: string,
+  mark: string,
 ): Promise<{ ok: true } | { ok: false; status: number; error: string }> {
   if (!isSiteKey(siteKey) || !isClientId(visitorId)) {
     return { ok: false, status: 404, error: "Unknown visitor" };
@@ -182,6 +186,7 @@ export async function saveVisitorNote(
   const visitor = await repo.getVisitor(siteKey, visitorId);
   if (!visitor) return { ok: false, status: 404, error: "Unknown visitor" };
   visitor.note = note.trim().slice(0, 500);
+  visitor.mark = MARKS.has(mark) ? mark : "";
   await repo.putVisitor(visitor);
   return { ok: true };
 }

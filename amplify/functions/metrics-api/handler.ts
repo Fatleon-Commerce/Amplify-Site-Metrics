@@ -141,8 +141,9 @@ export const handler = async (event: FunctionUrlEvent) => {
       const siteKey = typeof body.siteKey === "string" ? body.siteKey : "";
       const visitorId = typeof body.visitorId === "string" ? body.visitorId : "";
       const note = typeof body.note === "string" ? body.note : "";
+      const mark = typeof body.mark === "string" ? body.mark : "";
       if (!isClientId(visitorId)) return respond(404, { ok: false, error: "Unknown visitor" });
-      const result = await saveVisitorNote(store(), siteKey, visitorId, note);
+      const result = await saveVisitorNote(store(), siteKey, visitorId, note, mark);
       if (!result.ok) return respond(result.status, result);
       return respond(200, result);
     }

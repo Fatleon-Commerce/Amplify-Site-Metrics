@@ -39,7 +39,12 @@ export default async function VisitorPage({
         {visitor.ip ? <span>IP {visitor.ip}</span> : null}
       </div>
       <p className="note-line">
-        <VisitorNote siteKey={detail.site.siteKey} visitorId={visitor.visitorId} note={visitor.note ?? ""} />
+        <VisitorNote
+          siteKey={detail.site.siteKey}
+          visitorId={visitor.visitorId}
+          note={visitor.note ?? ""}
+          mark={visitor.mark ?? ""}
+        />
       </p>
       {visitor.firstReferrer ? <p className="muted">Referrer {visitor.firstReferrer}</p> : null}
       {utm ? <p className="muted">UTM {utm}</p> : null}

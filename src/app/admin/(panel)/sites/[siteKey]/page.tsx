@@ -45,26 +45,40 @@ export default async function SitePage({
     href: `/admin/sites/${overview.site.siteKey}/visitors/${visitor.visitorId}`,
     siteKey: overview.site.siteKey,
     note: visitor.note ?? "",
+    mark: visitor.mark ?? "",
   }));
   const daily = [...overview.days].reverse();
 
   return (
     <main className="wrap">
-      <p className="muted">
-        <Link href="/admin">Sites</Link> / {overview.site.name}
-      </p>
-      <div className="spread">
-        <h1>{overview.site.name}</h1>
-        <DeleteSiteButton siteKey={overview.site.siteKey} />
-      </div>
-      {searchParams.created ? <div className="banner">Site created. Paste the script below before &lt;/body&gt;.</div> : null}
-      <CopySnippet snippet={snippet} />
-      <p>
-        <a href={`/preview.html?site=${overview.site.siteKey}`} target="_blank" rel="noreferrer">
-          Open test page
-        </a>
-        <span className="muted"> · Raw visits are kept for {EVENT_TTL_DAYS} days</span>
-      </p>
+      <header className="site-head">
+        <p className="crumb">
+          <Link href="/admin">Sites</Link>
+          <span aria-hidden="true">/</span>
+          {overview.site.name}
+        </p>
+        <div className="spread">
+          <div>
+            <h1>{overview.site.name}</h1>
+            <p className="muted site-key">{overview.site.siteKey}</p>
+          </div>
+          <DeleteSiteButton siteKey={overview.site.siteKey} />
+        </div>
+        {searchParams.created ? <div className="banner">Site created. Paste the script below before &lt;/body&gt;.</div> : null}
+        <section className="install">
+          <div className="install-label">
+            <span>Tracking script</span>
+            <span className="muted">Paste before &lt;/body&gt;</span>
+          </div>
+          <CopySnippet snippet={snippet} />
+          <p className="install-links">
+            <a href={`/preview.html?site=${overview.site.siteKey}`} target="_blank" rel="noreferrer">
+              Open test page
+            </a>
+            <span className="muted">Raw visits are kept for {EVENT_TTL_DAYS} days</span>
+          </p>
+        </section>
+      </header>
       <section className="stats">
         <div className="card stat">
           <b>{overview.todayPageviews}</b>

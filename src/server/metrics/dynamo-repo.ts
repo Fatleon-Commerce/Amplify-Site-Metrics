@@ -64,6 +64,7 @@ function visitorFrom(item: Item): VisitorRecord {
     rateWindowMinute: requiredNumber(item, "rateWindowMinute"),
     rateCount: requiredNumber(item, "rateCount"),
     note: requiredString(item, "note"),
+    mark: requiredString(item, "mark"),
   };
 }
 

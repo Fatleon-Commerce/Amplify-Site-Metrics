@@ -105,8 +105,8 @@ export class RemoteBackend implements MetricsBackend {
     return json.detail ?? null;
   }
 
-  saveNote(token: string, siteKey: string, visitorId: string, note: string) {
-    return this.call({ op: "saveNote", siteKey, visitorId, note }, token).then(({ status, json }) => {
+  saveNote(token: string, siteKey: string, visitorId: string, note: string, mark: string) {
+    return this.call({ op: "saveNote", siteKey, visitorId, note, mark }, token).then(({ status, json }) => {
       if (json.ok) return { ok: true as const };
       return { ok: false as const, status, error: json.error ?? "Could not save the note" };
     });

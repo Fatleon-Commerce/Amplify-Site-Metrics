@@ -79,9 +79,9 @@ export class FileBackend implements MetricsBackend {
     return serial(() => loadDetail(this.repo, siteKey, visitorId));
   }
 
-  saveNote(token: string, siteKey: string, visitorId: string, note: string) {
+  saveNote(token: string, siteKey: string, visitorId: string, note: string, mark: string) {
     this.assertToken(token);
-    return serial(() => saveVisitorNote(this.repo, siteKey, visitorId, note));
+    return serial(() => saveVisitorNote(this.repo, siteKey, visitorId, note, mark));
   }
 
   private assertToken(token: string): void {

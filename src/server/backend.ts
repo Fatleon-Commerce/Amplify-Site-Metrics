@@ -25,6 +25,7 @@ export interface MetricsBackend {
     siteKey: string,
     visitorId: string,
     note: string,
+    mark: string,
   ): Promise<{ ok: true } | { ok: false; status: number; error: string }>;
 }
 

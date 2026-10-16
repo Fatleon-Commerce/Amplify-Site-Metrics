@@ -21,7 +21,16 @@ export type VisitorView = {
   href: string;
   siteKey: string;
   note: string;
+  mark: string;
 };
+
+function landingLabel(path: string): string {
+  try {
+    return decodeURIComponent(path);
+  } catch {
+    return path;
+  }
+}
 
 export function VisitorTable({ visitors }: { visitors: VisitorView[] }) {
   const [query, setQuery] = useState("");
@@ -74,10 +83,7 @@ export function VisitorTable({ visitors }: { visitors: VisitorView[] }) {
               <th>Visitor</th>
               <th>First seen</th>
               <th>Activity</th>
-              <th>Device</th>
-              <th>Region</th>
-              <th>Source</th>
-              <th>Landing page</th>
+              <th>Origin</th>
               <th>Note</th>
               <th></th>
             </tr>
@@ -85,11 +91,11 @@ export function VisitorTable({ visitors }: { visitors: VisitorView[] }) {
           <tbody>
             {visitors.length === 0 ? (
               <tr>
-                <td colSpan={9}>No visits yet. Add the script to a page, then refresh.</td>
+                <td colSpan={6}>No visits yet. Add the script to a page, then refresh.</td>
               </tr>
             ) : filtered.length === 0 ? (
               <tr>
-                <td colSpan={9}>No visitors match this filter.</td>
+                <td colSpan={6}>No visitors match this filter.</td>
               </tr>
             ) : (
               filtered.map((visitor) => (
@@ -109,14 +115,19 @@ export function VisitorTable({ visitors }: { visitors: VisitorView[] }) {
                       {visitor.pageCount === 1 ? "pageview" : "pageviews"}
                     </span>
                   </td>
-                  <td>{visitor.device}</td>
-                  <td>{visitor.region}</td>
-                  <td>{visitor.source}</td>
-                  <td className="path" title={visitor.landingPath}>
-                    {visitor.landingPath}
+                  <td className="origin">
+                    {visitor.region} · {visitor.device}
+                    <span className="sub" title={`${visitor.source} · ${landingLabel(visitor.landingPath)}`}>
+                      {visitor.source} · {landingLabel(visitor.landingPath)}
+                    </span>
                   </td>
                   <td className="note-cell">
-                    <VisitorNote siteKey={visitor.siteKey} visitorId={visitor.visitorId} note={visitor.note} />
+                    <VisitorNote
+                      siteKey={visitor.siteKey}
+                      visitorId={visitor.visitorId}
+                      note={visitor.note}
+                      mark={visitor.mark}
+                    />
                   </td>
                   <td>
                     <Link href={visitor.href}>Path</Link>
