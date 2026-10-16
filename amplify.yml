@@ -1,0 +1,41 @@
+version: 1
+backend:
+  phases:
+    build:
+      commands:
+        - npm install --include=dev --cache .npm --prefer-offline
+        - echo "AWS_BRANCH=$AWS_BRANCH AWS_APP_ID=$AWS_APP_ID"
+        - |
+          if [ -z "$AWS_BRANCH" ] || [ -z "$AWS_APP_ID" ]; then
+            echo "ERROR: AWS_BRANCH or AWS_APP_ID is empty."
+            echo "Ensure this is an Amplify Gen 2 fullstack app (backend section enabled)."
+            exit 1
+          fi
+        - npx ampx pipeline-deploy --branch "$AWS_BRANCH" --app-id "$AWS_APP_ID"
+        - |
+          node -e "
+            const fs = require('fs');
+            const json = JSON.parse(fs.readFileSync('amplify_outputs.json', 'utf8'));
+            const url = (json.custom && json.custom.metricsApiUrl) || '';
+            if (!url) {
+              console.error('metricsApiUrl is missing from amplify_outputs.json');
+              process.exit(1);
+            }
+            fs.appendFileSync('.env.production', 'METRICS_API_URL=' + url + '\n');
+          "
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - npm install --include=dev --cache .npm --prefer-offline
+    build:
+      commands:
+        - npm run build
+  artifacts:
+    baseDirectory: .next
+    files:
+      - "**/*"
+  cache:
+    paths:
+      - .npm/**/*
+      - node_modules/**/*

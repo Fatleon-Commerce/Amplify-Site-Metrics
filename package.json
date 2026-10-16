@@ -1,0 +1,34 @@
+{
+  "name": "site-metrics",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p amplify/tsconfig.json",
+    "check": "bash scripts/dev/verify-local.sh",
+    "test": "node --import tsx --test src/server/metrics/*.test.ts src/lib/*.test.ts",
+    "sandbox": "ampx sandbox --identifier site-metrics",
+    "sandbox:secret": "ampx sandbox secret set ADMIN_PASSWORD --identifier site-metrics"
+  },
+  "dependencies": {
+    "@aws-amplify/backend": "^1.23.0",
+    "@aws-amplify/backend-cli": "^1.8.3",
+    "@aws-sdk/client-dynamodb": "^3.1069.0",
+    "@aws-sdk/lib-dynamodb": "^3.1069.0",
+    "aws-cdk-lib": "^2.259.0",
+    "constructs": "^10.6.0",
+    "next": "14.2.35",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.162",
+    "@types/node": "^20.17.0",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "tsx": "^4.22.4",
+    "typescript": "^5.8.0"
+  }
+}

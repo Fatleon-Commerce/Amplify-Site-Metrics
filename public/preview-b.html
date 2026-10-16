@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Script test page · page 2</title>
+  </head>
+  <body>
+    <h1>Page 2</h1>
+    <p>If the script is working, this visitor path includes the test page and this page.</p>
+    <p><a id="back" href="preview.html">Back to the test page</a></p>
+    <script>
+      var key = new URLSearchParams(location.search).get("site") || "";
+      if (key) {
+        document.getElementById("back").href = "preview.html?site=" + encodeURIComponent(key);
+        var script = document.createElement("script");
+        script.src = "/" + encodeURIComponent(key) + ".js";
+        script.defer = true;
+        document.head.appendChild(script);
+      }
+    </script>
+  </body>
+</html>

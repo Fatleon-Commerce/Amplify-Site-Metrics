@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Script test page</title>
+  </head>
+  <body>
+    <h1>Script test page</h1>
+    <p>This page loads the tracking script. Open the next page and both should appear in the visitor path.</p>
+    <p><a id="next" href="preview-b.html">Next page</a></p>
+    <script>
+      var key = new URLSearchParams(location.search).get("site") || "";
+      if (key) {
+        document.getElementById("next").href = "preview-b.html?site=" + encodeURIComponent(key);
+        var script = document.createElement("script");
+        script.src = "/" + encodeURIComponent(key) + ".js";
+        script.defer = true;
+        document.head.appendChild(script);
+      }
+    </script>
+  </body>
+</html>
