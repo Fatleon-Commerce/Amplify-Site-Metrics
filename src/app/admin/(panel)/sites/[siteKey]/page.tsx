@@ -10,14 +10,6 @@ import { publicOrigin, requireAdmin } from "@/server/http";
 
 export const dynamic = "force-dynamic";
 
-function pageLabel(path: string): string {
-  try {
-    return decodeURIComponent(path);
-  } catch {
-    return path;
-  }
-}
-
 export default async function SitePage({
   params,
   searchParams,
@@ -56,7 +48,6 @@ export default async function SitePage({
     mark: visitor.mark ?? "",
   }));
   const daily = [...overview.days].reverse();
-  const pageDays = overview.pageDays ?? [];
 
   return (
     <main className="wrap">
@@ -100,7 +91,12 @@ export default async function SitePage({
         </div>
       </section>
       <section className="card">
-        <h2>Daily summary</h2>
+        <div className="spread section-head">
+          <h2>Daily summary</h2>
+          <Link href={`/admin/sites/${overview.site.siteKey}/pages`} className="button secondary path-btn">
+            Pages
+          </Link>
+        </div>
         <div className="summary-grid">
           <div className="bars" aria-label="Pageviews, last 7 days">
             {overview.days.map((day) => (
@@ -132,39 +128,6 @@ export default async function SitePage({
             </table>
           </div>
         </div>
-      </section>
-      <section className="card">
-        <h2>Pages</h2>
-        <p className="muted page-note">Each path for the last 7 days. The query string is not counted separately.</p>
-        {pageDays.length === 0 ? (
-          <p className="muted">Page counts start with the next visit.</p>
-        ) : (
-          <div className="page-days">
-            {pageDays.map((day) => (
-              <div className="page-day" key={day.date}>
-                <h3>{day.date}</h3>
-                <div className="table-wrap">
-                  <table className="pages">
-                    <thead>
-                      <tr>
-                        <th>Path</th>
-                        <th>Pageviews</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {day.pages.map((page) => (
-                        <tr key={page.path}>
-                          <td>{pageLabel(page.path)}</td>
-                          <td>{page.pageviews}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
       </section>
       <VisitorTable visitors={rows} />
     </main>

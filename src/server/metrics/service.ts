@@ -1,5 +1,5 @@
 import { DAILY_TTL_DAYS, EVENT_TTL_DAYS, MAX_DURATION_MS, VISIT_GAP_MS } from "../../lib/constants";
-import { clip, createSiteKey, dayKey, isClientId, isSiteKey, recentDayKeys, ttlAfter } from "./ids";
+import { clip, createSiteKey, dayKey, isClientId, isDayKey, isSiteKey, recentDayKeys, ttlAfter } from "./ids";
 import { clampOccurredAt, isBot, parseDevice, trafficSource } from "./parse";
 import {
   clearLoginAttempts,
@@ -15,7 +15,7 @@ import type {
   EventRecord,
   LoginResult,
   Overview,
-  PageDayRecord,
+  PageReport,
   Repo,
   SiteRecord,
   SiteSummary,
@@ -169,35 +169,33 @@ export async function loadOverview(repo: Repo, siteKey: string, now = new Date()
     uniques: byDate.get(date)?.uniques ?? 0,
   }));
   const today = days[days.length - 1] ?? { pageviews: 0, uniques: 0 };
-  const from = dates[0] ?? "";
-  const to = dates[dates.length - 1] ?? "";
-  const pageRows = from && to ? await repo.listPageDays(siteKey, from, to) : [];
   return {
     site,
     todayPageviews: today.pageviews,
     todayUniques: today.uniques,
     last7Pageviews: days.reduce((sum, day) => sum + day.pageviews, 0),
     days,
-    pageDays: groupPageDays(dates, pageRows),
   };
 }
 
-function groupPageDays(
-  dates: string[],
-  rows: PageDayRecord[],
-): Overview["pageDays"] {
-  const grouped = new Map<string, Array<{ path: string; pageviews: number }>>();
-  for (const row of rows) {
-    const pages = grouped.get(row.date) ?? [];
-    pages.push({ path: row.path, pageviews: row.pageviews });
-    grouped.set(row.date, pages);
-  }
-  return [...dates].reverse().flatMap((date) => {
-    const pages = grouped.get(date);
-    if (!pages || pages.length === 0) return [];
-    pages.sort((a, b) => b.pageviews - a.pageviews || a.path.localeCompare(b.path));
-    return [{ date, pages }];
-  });
+export async function loadPageReport(
+  repo: Repo,
+  siteKey: string,
+  from: string,
+  to: string,
+): Promise<PageReport | null> {
+  if (!isSiteKey(siteKey) || !isDayKey(from) || !isDayKey(to) || from > to) return null;
+  const span = Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86400000);
+  if (span > 6) return null;
+  const site = await repo.getSite(siteKey);
+  if (!site) return null;
+  const rows = await repo.listPageDays(siteKey, from, to);
+  const totals = new Map<string, number>();
+  for (const row of rows) totals.set(row.path, (totals.get(row.path) ?? 0) + row.pageviews);
+  const pages = [...totals.entries()]
+    .map(([path, pageviews]) => ({ path, pageviews }))
+    .sort((a, b) => b.pageviews - a.pageviews || a.path.localeCompare(b.path));
+  return { site, from, to, pages };
 }
 
 const MARKS = new Set(["valid", "review", "invalid"]);

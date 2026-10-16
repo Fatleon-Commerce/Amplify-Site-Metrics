@@ -5,6 +5,7 @@ import {
   listSiteSummaries,
   loadDetail,
   loadOverview,
+  loadPageReport,
   loadVisitors,
   loginWithPassword,
   removeSite,
@@ -128,6 +129,15 @@ export const handler = async (event: FunctionUrlEvent) => {
       const overview = await loadOverview(store(), siteKey);
       if (!overview) return respond(404, { ok: false, error: "Unknown site" });
       return respond(200, { ok: true, overview });
+    }
+
+    if (op === "pages") {
+      const siteKey = typeof body.siteKey === "string" ? body.siteKey : "";
+      const from = typeof body.from === "string" ? body.from : "";
+      const to = typeof body.to === "string" ? body.to : "";
+      const report = await loadPageReport(store(), siteKey, from, to);
+      if (!report) return respond(404, { ok: false, error: "Unknown site" });
+      return respond(200, { ok: true, report });
     }
 
     if (op === "visitors") {

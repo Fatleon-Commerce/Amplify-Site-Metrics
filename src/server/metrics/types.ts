@@ -75,7 +75,13 @@ export type Overview = {
   todayUniques: number;
   last7Pageviews: number;
   days: Array<{ date: string; pageviews: number; uniques: number }>;
-  pageDays: Array<{ date: string; pages: Array<{ path: string; pageviews: number }> }>;
+};
+
+export type PageReport = {
+  site: SiteRecord;
+  from: string;
+  to: string;
+  pages: Array<{ path: string; pageviews: number }>;
 };
 
 export type VisitorDetail = {

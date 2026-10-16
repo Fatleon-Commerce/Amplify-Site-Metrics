@@ -4,6 +4,7 @@ import type {
   CollectResult,
   LoginResult,
   Overview,
+  PageReport,
   SiteSummary,
   VisitorDetail,
   VisitorRecord,
@@ -17,6 +18,7 @@ type Envelope = {
   siteKey?: string;
   sites?: SiteSummary[];
   overview?: Overview;
+  report?: PageReport;
   visitors?: VisitorRecord[];
   detail?: VisitorDetail;
 };
@@ -93,6 +95,13 @@ export class RemoteBackend implements MetricsBackend {
     if (status === 404) return null;
     if (status !== 200 || !json.overview) throw new Error(json.error ?? "Could not load the site");
     return json.overview;
+  }
+
+  async pages(token: string, siteKey: string, from: string, to: string): Promise<PageReport | null> {
+    const { status, json } = await this.call({ op: "pages", siteKey, from, to }, token);
+    if (status === 404) return null;
+    if (status !== 200 || !json.report) throw new Error(json.error ?? "Could not load pages");
+    return json.report;
   }
 
   async visitors(token: string, siteKey: string): Promise<VisitorRecord[] | null> {

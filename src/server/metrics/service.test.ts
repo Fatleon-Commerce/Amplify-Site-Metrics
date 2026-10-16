@@ -9,6 +9,7 @@ import {
   listSiteSummaries,
   loadDetail,
   loadOverview,
+  loadPageReport,
   loginWithPassword,
   pagePath,
   saveVisitorNote,
@@ -171,11 +172,14 @@ test("page counts merge query strings and split by day", async () => {
     view("event0004", { siteKey, path: "/about/", occurredAt: nextDay.toISOString() }),
     { now: nextDay },
   );
-  const overview = await loadOverview(repo, siteKey, nextDay);
-  assert.deepEqual(overview?.pageDays, [
-    { date: "2026-10-17", pages: [{ path: "/about/", pageviews: 1 }] },
-    { date: "2026-10-16", pages: [{ path: "/shop", pageviews: 3 }] },
+  const oneDay = await loadPageReport(repo, siteKey, "2026-10-16", "2026-10-16");
+  assert.deepEqual(oneDay?.pages, [{ path: "/shop", pageviews: 3 }]);
+  const week = await loadPageReport(repo, siteKey, "2026-10-11", "2026-10-17");
+  assert.deepEqual(week?.pages, [
+    { path: "/shop", pageviews: 3 },
+    { path: "/about/", pageviews: 1 },
   ]);
+  assert.equal(await loadPageReport(repo, siteKey, "2026-10-01", "2026-10-17"), null);
   const detail = await loadDetail(repo, siteKey, VISITOR);
   assert.equal(detail?.events[0]?.path, "/shop?utm_source=bing");
 });

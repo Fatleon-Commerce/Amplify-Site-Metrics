@@ -8,6 +8,14 @@ import { requireAdmin } from "@/server/http";
 
 export const dynamic = "force-dynamic";
 
+function pageLabel(path: string): string {
+  try {
+    return decodeURIComponent(path);
+  } catch {
+    return path;
+  }
+}
+
 export default async function VisitorPage({
   params,
 }: {
@@ -61,7 +69,7 @@ export default async function VisitorPage({
             <div className="time-row" key={row.event.eventId}>
               <time className="muted">{formatDateTime(row.event.occurredAt)}</time>
               <div>
-                <div className="mono">{row.event.path}</div>
+                <div className="mono path-text">{pageLabel(row.event.path)}</div>
                 {row.event.title ? <span className="sub">{row.event.title}</span> : null}
               </div>
               <span className={row.current ? "pill current" : row.durationLabel === "—" ? "muted" : "pill stay"}>

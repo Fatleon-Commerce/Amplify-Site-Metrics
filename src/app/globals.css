@@ -160,13 +160,16 @@ input:focus, select:focus, button:focus-visible {
 .bar-fill { width: 100%; max-width: 42px; background: var(--blue); border-radius: 6px 6px 2px 2px; }
 .bar em { font-style: normal; }
 
-.page-note { margin: -4px 0 12px; }
-.page-days { display: flex; flex-direction: column; gap: 20px; }
-.page-day h3 { margin: 0 0 8px; font-size: 14px; }
+.page-note { margin: 8px 0 0; }
+.section-head { align-items: center; margin-bottom: 12px; }
+.section-head h2 { margin: 0; }
+.filters input[type="date"] { flex: none; width: 160px; min-width: 0; }
+.pages { table-layout: fixed; }
 .pages th, .pages td { padding: 8px 12px; }
-.pages th:last-child, .pages td:last-child { text-align: right; }
+.pages th:last-child, .pages td:last-child { width: 120px; text-align: right; }
 .pages td:first-child {
   white-space: normal;
+  overflow-wrap: anywhere;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 13px;
 }
@@ -294,11 +297,16 @@ th { font-size: 13px; color: var(--muted); font-weight: 600; background: #fafbfc
 .timeline { display: flex; flex-direction: column; }
 .time-row, .gap-row {
   display: grid;
-  grid-template-columns: 120px 1fr auto;
+  grid-template-columns: 120px minmax(0, 1fr) auto;
   gap: 12px;
   align-items: center;
   padding: 12px 0;
   border-bottom: 1px solid var(--line);
+}
+.time-row .path-text,
+.time-row .sub {
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 .pill {
   display: inline-flex;
