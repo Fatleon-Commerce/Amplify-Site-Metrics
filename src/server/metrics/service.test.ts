@@ -254,7 +254,9 @@ test("guestbook widget is appended only when the board is on", () => {
   );
   assert.match(source, /attachShadow/);
   assert.match(source, /https:\/\/metrics\.example\/api\/board\/abcd1234/);
-  assert.match(source, /textContent/);
+  assert.match(source, /Guestbook/);
+  assert.match(source, /Write a message/);
+  assert.doesNotMatch(source, /留言/);
   assert.doesNotMatch(source, /<script/);
   new Function(source);
 });

@@ -65,7 +65,8 @@ export function boardWidget(endpoint: string): string {
   function when(iso) {
     var date = new Date(iso);
     if (isNaN(date.getTime())) return "";
-    return (date.getMonth() + 1) + "月" + date.getDate() + "日 " + pad(date.getHours()) + ":" + pad(date.getMinutes());
+    var months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    return months[date.getMonth()] + " " + date.getDate() + ", " + pad(date.getHours()) + ":" + pad(date.getMinutes());
   }
   function el(tag, className) {
     var node = document.createElement(tag);
@@ -85,7 +86,7 @@ export function boardWidget(endpoint: string): string {
     style.textContent = ${css};
     var launcher = el("button", "launcher");
     launcher.type = "button";
-    launcher.setAttribute("aria-label", "留言");
+    launcher.setAttribute("aria-label", "Guestbook");
     launcher.setAttribute("aria-expanded", "false");
     launcher.innerHTML = ${icon};
     var panel = el("div", "panel");
@@ -94,10 +95,10 @@ export function boardWidget(endpoint: string): string {
     launcher.setAttribute("aria-controls", panel.id);
     var head = el("div", "head");
     var title = el("strong");
-    title.textContent = "留言";
+    title.textContent = "Guestbook";
     var closeBtn = el("button");
     closeBtn.type = "button";
-    closeBtn.setAttribute("aria-label", "关闭");
+    closeBtn.setAttribute("aria-label", "Close");
     closeBtn.textContent = "×";
     head.appendChild(title);
     head.appendChild(closeBtn);
@@ -113,16 +114,16 @@ export function boardWidget(endpoint: string): string {
     var nameInput = el("input");
     nameInput.type = "text";
     nameInput.maxLength = MAX_NAME;
-    nameInput.placeholder = "怎么称呼（可不填）";
-    nameInput.setAttribute("aria-label", "名字");
+    nameInput.placeholder = "Name (optional)";
+    nameInput.setAttribute("aria-label", "Name");
     nameInput.autocomplete = "nickname";
     var text = el("textarea");
     text.maxLength = MAX_BODY;
-    text.placeholder = "写点什么";
-    text.setAttribute("aria-label", "留言内容");
+    text.placeholder = "Write a message";
+    text.setAttribute("aria-label", "Message");
     var submitBtn = el("button");
     submitBtn.type = "submit";
-    submitBtn.textContent = "发送";
+    submitBtn.textContent = "Send";
     form.appendChild(honey);
     form.appendChild(nameInput);
     form.appendChild(text);
@@ -140,7 +141,7 @@ export function boardWidget(endpoint: string): string {
       list.textContent = "";
       if (!items.length) {
         var empty = el("p", "empty");
-        empty.textContent = "还没有留言";
+        empty.textContent = "No messages yet";
         list.appendChild(empty);
         return;
       }
@@ -148,7 +149,7 @@ export function boardWidget(endpoint: string): string {
         var item = items[index];
         var box = el("div", "msg");
         var who = el("strong");
-        who.textContent = item.name || "匿名";
+        who.textContent = item.name || "Anonymous";
         var time = el("time");
         time.dateTime = item.createdAt || "";
         time.textContent = when(item.createdAt);
@@ -173,7 +174,7 @@ export function boardWidget(endpoint: string): string {
     function load() {
       if (loaded || loading) return;
       loading = true;
-      status.textContent = "加载中…";
+      status.textContent = "Loading…";
       fetch(endpoint, { headers: { accept: "application/json" }, cache: "no-store", credentials: "omit", mode: "cors" })
         .then(function (response) { return response.json(); })
         .then(function (data) {
@@ -183,28 +184,28 @@ export function boardWidget(endpoint: string): string {
           stamp = data.stamp || "";
           items = data.enabled === false ? [] : (data.messages || []);
           form.hidden = data.enabled === false;
-          status.textContent = data.enabled === false ? "留言已关闭" : "";
+          status.textContent = data.enabled === false ? "Guestbook is off" : "";
           render();
         })
         .catch(function () {
           loading = false;
-          status.textContent = "暂时打不开";
+          status.textContent = "Could not load messages";
         });
     }
     function fail(code) {
-      if (code === "wait") status.textContent = "请稍等几秒再发送";
-      else if (code === "rate") status.textContent = "发得太快了，过一会儿再试";
-      else if (code === "duplicate") status.textContent = "这条已经发过了";
-      else if (code === "large") status.textContent = "内容太长了";
-      else if (code === "empty") status.textContent = "写点内容再发送";
-      else if (code === "closed") { form.hidden = true; status.textContent = "留言已关闭"; }
+      if (code === "wait") status.textContent = "Wait a few seconds and try again";
+      else if (code === "rate") status.textContent = "Too many messages. Try again later";
+      else if (code === "duplicate") status.textContent = "You already sent this";
+      else if (code === "large") status.textContent = "Message is too long";
+      else if (code === "empty") status.textContent = "Write a message first";
+      else if (code === "closed") { form.hidden = true; status.textContent = "Guestbook is off"; }
       else if (code === "stamp") {
-        status.textContent = "请再试一次";
+        status.textContent = "Try again";
         fetch(endpoint, { cache: "no-store", credentials: "omit", mode: "cors" })
           .then(function (response) { return response.json(); })
           .then(function (data) { if (data && data.stamp) stamp = data.stamp; })
           .catch(function () {});
-      } else status.textContent = "发送失败";
+      } else status.textContent = "Could not send";
     }
     launcher.addEventListener("click", function () { setOpen(!open); });
     closeBtn.addEventListener("click", function () { close(); });
@@ -227,10 +228,10 @@ export function boardWidget(endpoint: string): string {
       if (pending || form.hidden) return;
       var body = String(text.value || "").replace(/^\\s+|\\s+$/g, "");
       var name = String(nameInput.value || "").replace(/^\\s+|\\s+$/g, "");
-      if (!body) { status.textContent = "写点内容再发送"; return; }
+      if (!body) { status.textContent = "Write a message first"; return; }
       pending = true;
       submitBtn.disabled = true;
-      submitBtn.textContent = "发送中…";
+      submitBtn.textContent = "Sending…";
       status.textContent = "";
       fetch(endpoint, {
         method: "POST",
@@ -243,7 +244,7 @@ export function boardWidget(endpoint: string): string {
       }).then(function (data) {
         pending = false;
         submitBtn.disabled = false;
-        submitBtn.textContent = "发送";
+        submitBtn.textContent = "Send";
         if (data.ok === true && data.message) {
           items.unshift(data.message);
           if (items.length > ${BOARD_LIST_LIMIT}) items.length = ${BOARD_LIST_LIMIT};
@@ -262,8 +263,8 @@ export function boardWidget(endpoint: string): string {
       }).catch(function () {
         pending = false;
         submitBtn.disabled = false;
-        submitBtn.textContent = "发送";
-        status.textContent = "发送失败";
+        submitBtn.textContent = "Send";
+        status.textContent = "Could not send";
       });
     });
   }
