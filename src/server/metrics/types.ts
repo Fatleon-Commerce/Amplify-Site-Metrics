@@ -4,6 +4,33 @@ export type SiteRecord = {
   createdAt: string;
   pageviewCount: number;
   visitorCount: number;
+  guestbookEnabled: boolean;
+};
+
+export type MessageRecord = {
+  siteKey: string;
+  messageId: string;
+  name: string;
+  body: string;
+  createdAt: string;
+  ip: string;
+};
+
+export type PublicBoardMessage = {
+  messageId: string;
+  name: string;
+  body: string;
+  createdAt: string;
+};
+
+export type PostRate = {
+  siteKey: string;
+  ip: string;
+  windowStart: number;
+  count: number;
+  lastAt: number;
+  lastBody: string;
+  ttl: number;
 };
 
 export type VisitorRecord = {
@@ -125,4 +152,9 @@ export interface Repo {
   getDailies(siteKey: string, dates: string[]): Promise<DailyRecord[]>;
   addPageDay(siteKey: string, date: string, path: string, pageviews: number, ttl: number): Promise<void>;
   listPageDays(siteKey: string, from: string, to: string): Promise<PageDayRecord[]>;
+  listMessages(siteKey: string, limit: number): Promise<MessageRecord[]>;
+  insertMessage(message: MessageRecord): Promise<void>;
+  deleteMessage(siteKey: string, messageId: string): Promise<boolean>;
+  getPostRate(siteKey: string, ip: string): Promise<PostRate | null>;
+  putPostRate(rate: PostRate): Promise<void>;
 }

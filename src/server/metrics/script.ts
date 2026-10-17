@@ -1,9 +1,10 @@
 import { VISIT_GAP_MS } from "../../lib/constants";
+import { boardWidget } from "./board-widget";
 
-export function trackerScript(siteKey: string, endpoint: string): string {
+export function trackerScript(siteKey: string, endpoint: string, boardEndpoint = ""): string {
   const key = JSON.stringify(siteKey);
   const url = JSON.stringify(endpoint);
-  return `(function(){
+  const source = `(function(){
   if (window.__siteMetrics) return;
   window.__siteMetrics = 1;
   var siteKey = ${key};
@@ -98,4 +99,6 @@ export function trackerScript(siteKey: string, endpoint: string): string {
   window.addEventListener("pagehide", function () { ping(true); });
   page();
 })();`;
+  if (!boardEndpoint) return source;
+  return `${source}\n${boardWidget(boardEndpoint)}`;
 }

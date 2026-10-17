@@ -12,16 +12,18 @@ export async function GET(_request: NextRequest, { params }: { params: { siteKey
   }
 
   const backend = await getBackend();
-  const exists = await backend.siteExists(params.siteKey);
-  if (!exists) {
+  const config = await backend.siteConfig(params.siteKey);
+  if (!config) {
     return new NextResponse("unknown site", { status: 404, headers: { "cache-control": "no-store" } });
   }
 
-  const script = trackerScript(params.siteKey, `${publicOrigin()}/api/collect`);
+  const origin = publicOrigin();
+  const boardEndpoint = config.guestbookEnabled ? `${origin}/api/board/${params.siteKey}` : "";
+  const script = trackerScript(params.siteKey, `${origin}/api/collect`, boardEndpoint);
   return new NextResponse(script, {
     headers: {
       "content-type": "application/javascript; charset=utf-8",
-      "cache-control": "public, max-age=300",
+      "cache-control": "public, max-age=60",
       "access-control-allow-origin": "*",
     },
   });

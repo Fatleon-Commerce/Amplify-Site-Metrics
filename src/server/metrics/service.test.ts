@@ -241,5 +241,20 @@ test("tracker script carries the site key and collect endpoint", () => {
   assert.match(source, /abcd1234/);
   assert.match(source, /https:\/\/metrics\.example\/api\/collect/);
   assert.match(source, /pageview/);
+  assert.doesNotMatch(source, /attachShadow/);
   assert.doesNotMatch(source, /<script/);
+  new Function(source);
+});
+
+test("guestbook widget is appended only when the board is on", () => {
+  const source = trackerScript(
+    "abcd1234",
+    "https://metrics.example/api/collect",
+    "https://metrics.example/api/board/abcd1234",
+  );
+  assert.match(source, /attachShadow/);
+  assert.match(source, /https:\/\/metrics\.example\/api\/board\/abcd1234/);
+  assert.match(source, /textContent/);
+  assert.doesNotMatch(source, /<script/);
+  new Function(source);
 });

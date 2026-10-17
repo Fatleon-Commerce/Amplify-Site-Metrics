@@ -121,6 +121,7 @@ export async function createNamedSite(repo: Repo, name: string, now = new Date()
       createdAt: now.toISOString(),
       pageviewCount: 0,
       visitorCount: 0,
+      guestbookEnabled: false,
     };
     try {
       await repo.createSite(site);

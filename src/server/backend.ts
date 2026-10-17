@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import type { CollectMeta, CollectResult, LoginResult, Overview, PageReport, SiteSummary, VisitorDetail, VisitorRecord } from "./metrics/types";
+import type { BoardOpenResult, BoardPostResult } from "./metrics/board";
+import type { CollectMeta, CollectResult, LoginResult, MessageRecord, Overview, PageReport, SiteSummary, VisitorDetail, VisitorRecord } from "./metrics/types";
 
 export class AuthError extends Error {
   constructor() {
@@ -12,8 +13,17 @@ export class AuthError extends Error {
 export interface MetricsBackend {
   login(password: string, ip: string): Promise<LoginResult>;
   verify(token: string): Promise<boolean>;
-  siteExists(siteKey: string): Promise<boolean>;
+  siteConfig(siteKey: string): Promise<{ guestbookEnabled: boolean } | null>;
   collect(input: unknown, meta: CollectMeta): Promise<CollectResult>;
+  openBoard(siteKey: string): Promise<BoardOpenResult>;
+  postBoard(siteKey: string, input: unknown, meta: CollectMeta): Promise<BoardPostResult>;
+  setGuestbook(token: string, siteKey: string, enabled: boolean): Promise<{ ok: true } | { ok: false; error: string }>;
+  boardMessages(token: string, siteKey: string): Promise<MessageRecord[] | null>;
+  deleteBoardMessage(
+    token: string,
+    siteKey: string,
+    messageId: string,
+  ): Promise<{ ok: true } | { ok: false; status: number; error: string }>;
   listSites(token: string): Promise<SiteSummary[]>;
   createSite(token: string, name: string): Promise<{ ok: true; siteKey: string } | { ok: false; error: string }>;
   deleteSite(token: string, siteKey: string): Promise<{ ok: true } | { ok: false; error: string }>;

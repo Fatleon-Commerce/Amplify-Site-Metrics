@@ -3,7 +3,9 @@ import path from "node:path";
 import type {
   DailyRecord,
   EventRecord,
+  MessageRecord,
   PageDayRecord,
+  PostRate,
   Repo,
   SiteRecord,
   VisitorRecord,
@@ -15,10 +17,16 @@ type Data = {
   events: EventRecord[];
   days: DailyRecord[];
   pages: PageDayRecord[];
+  messages: MessageRecord[];
+  rates: PostRate[];
 };
 
 function empty(): Data {
-  return { sites: [], visitors: [], events: [], days: [], pages: [] };
+  return { sites: [], visitors: [], events: [], days: [], pages: [], messages: [], rates: [] };
+}
+
+function normalizeSite(site: SiteRecord): SiteRecord {
+  return { ...site, guestbookEnabled: site.guestbookEnabled === true };
 }
 
 export class FileRepo implements Repo {
@@ -30,11 +38,13 @@ export class FileRepo implements Repo {
       const parsed = JSON.parse(raw) as Partial<Data>;
       const now = Math.floor(Date.now() / 1000);
       return {
-        sites: parsed.sites ?? [],
+        sites: (parsed.sites ?? []).map(normalizeSite),
         visitors: (parsed.visitors ?? []).filter((item) => item.ttl > now),
         events: (parsed.events ?? []).filter((item) => item.ttl > now),
         days: (parsed.days ?? []).filter((item) => item.ttl > now),
         pages: (parsed.pages ?? []).filter((item) => item.ttl > now),
+        messages: parsed.messages ?? [],
+        rates: (parsed.rates ?? []).filter((item) => item.ttl > now),
       };
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === "ENOENT") return empty();
@@ -76,6 +86,8 @@ export class FileRepo implements Repo {
     data.events = data.events.filter((event) => event.siteKey !== siteKey);
     data.days = data.days.filter((day) => day.siteKey !== siteKey);
     data.pages = data.pages.filter((page) => page.siteKey !== siteKey);
+    data.messages = data.messages.filter((message) => message.siteKey !== siteKey);
+    data.rates = data.rates.filter((rate) => rate.siteKey !== siteKey);
     await this.write(data);
   }
 
@@ -186,5 +198,41 @@ export class FileRepo implements Repo {
   async listPageDays(siteKey: string, from: string, to: string): Promise<PageDayRecord[]> {
     const data = await this.read();
     return data.pages.filter((page) => page.siteKey === siteKey && page.date >= from && page.date <= to);
+  }
+
+  async listMessages(siteKey: string, limit: number): Promise<MessageRecord[]> {
+    const data = await this.read();
+    return data.messages
+      .filter((message) => message.siteKey === siteKey)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.messageId.localeCompare(a.messageId))
+      .slice(0, limit);
+  }
+
+  async insertMessage(message: MessageRecord): Promise<void> {
+    const data = await this.read();
+    data.messages.push(message);
+    await this.write(data);
+  }
+
+  async deleteMessage(siteKey: string, messageId: string): Promise<boolean> {
+    const data = await this.read();
+    const before = data.messages.length;
+    data.messages = data.messages.filter((message) => message.siteKey !== siteKey || message.messageId !== messageId);
+    if (data.messages.length === before) return false;
+    await this.write(data);
+    return true;
+  }
+
+  async getPostRate(siteKey: string, ip: string): Promise<PostRate | null> {
+    const data = await this.read();
+    return data.rates.find((rate) => rate.siteKey === siteKey && rate.ip === ip) ?? null;
+  }
+
+  async putPostRate(rate: PostRate): Promise<void> {
+    const data = await this.read();
+    const index = data.rates.findIndex((item) => item.siteKey === rate.siteKey && item.ip === rate.ip);
+    if (index === -1) data.rates.push(rate);
+    else data.rates[index] = rate;
+    await this.write(data);
   }
 }

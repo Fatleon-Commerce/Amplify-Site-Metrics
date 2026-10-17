@@ -1,19 +1,31 @@
 import { randomBytes } from "node:crypto";
-import { SITE_KEY_LENGTH } from "../../lib/constants";
+import { BOARD_MESSAGE_ID_LENGTH, SITE_KEY_LENGTH } from "../../lib/constants";
 
 const ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789";
 
-export function createSiteKey(): string {
-  const bytes = randomBytes(SITE_KEY_LENGTH);
+function createId(length: number): string {
+  const bytes = randomBytes(length);
   let key = "";
-  for (let index = 0; index < SITE_KEY_LENGTH; index += 1) {
+  for (let index = 0; index < length; index += 1) {
     key += ALPHABET[bytes[index]! % ALPHABET.length];
   }
   return key;
 }
 
+export function createSiteKey(): string {
+  return createId(SITE_KEY_LENGTH);
+}
+
+export function createMessageId(): string {
+  return createId(BOARD_MESSAGE_ID_LENGTH);
+}
+
 export function isSiteKey(value: string): boolean {
   return new RegExp(`^[a-z0-9]{${SITE_KEY_LENGTH}}$`).test(value);
+}
+
+export function isMessageId(value: string): boolean {
+  return new RegExp(`^[a-z0-9]{${BOARD_MESSAGE_ID_LENGTH}}$`).test(value);
 }
 
 export function isClientId(value: string): boolean {

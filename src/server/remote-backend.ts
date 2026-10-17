@@ -1,8 +1,11 @@
 import { AuthError, type MetricsBackend } from "./backend";
+import type { BoardOpenResult, BoardPostResult } from "./metrics/board";
+import { publishMessage } from "./metrics/board";
 import type {
   CollectMeta,
   CollectResult,
   LoginResult,
+  MessageRecord,
   Overview,
   PageReport,
   SiteSummary,
@@ -21,6 +24,11 @@ type Envelope = {
   report?: PageReport;
   visitors?: VisitorRecord[];
   detail?: VisitorDetail;
+  guestbookEnabled?: boolean;
+  enabled?: boolean;
+  messages?: MessageRecord[];
+  message?: MessageRecord;
+  stamp?: string;
 };
 
 export class RemoteBackend implements MetricsBackend {
@@ -59,9 +67,54 @@ export class RemoteBackend implements MetricsBackend {
     }
   }
 
-  async siteExists(siteKey: string): Promise<boolean> {
-    const { json } = await this.call({ op: "siteExists", siteKey });
-    return Boolean(json.exists);
+  async siteConfig(siteKey: string): Promise<{ guestbookEnabled: boolean } | null> {
+    const { json } = await this.call({ op: "siteConfig", siteKey });
+    if (!json.exists) return null;
+    return { guestbookEnabled: json.guestbookEnabled === true };
+  }
+
+  async openBoard(siteKey: string): Promise<BoardOpenResult> {
+    const { status, json } = await this.call({ op: "boardOpen", siteKey });
+    if (json.ok && json.enabled === false) return { ok: true, enabled: false };
+    if (json.ok && json.enabled === true && json.stamp) {
+      return {
+        ok: true,
+        enabled: true,
+        messages: (json.messages ?? []).map(publishMessage),
+        stamp: json.stamp,
+      };
+    }
+    return { ok: false, status, error: json.error ?? "Could not open the guestbook" };
+  }
+
+  async postBoard(siteKey: string, input: unknown, meta: CollectMeta): Promise<BoardPostResult> {
+    const { status, json } = await this.call({ op: "boardPost", siteKey, input, meta });
+    if (json.ok && json.message && json.stamp) {
+      return { ok: true, message: publishMessage(json.message), stamp: json.stamp };
+    }
+    if (json.ok) return { ok: true };
+    return { ok: false, status, error: json.error ?? "Could not save the message" };
+  }
+
+  setGuestbook(token: string, siteKey: string, enabled: boolean) {
+    return this.call({ op: "setGuestbook", siteKey, enabled }, token).then(({ json }) => {
+      if (json.ok) return { ok: true as const };
+      return { ok: false as const, error: json.error ?? "Could not update the guestbook" };
+    });
+  }
+
+  async boardMessages(token: string, siteKey: string): Promise<MessageRecord[] | null> {
+    const { status, json } = await this.call({ op: "boardMessages", siteKey }, token);
+    if (status === 404) return null;
+    if (status !== 200 || !json.messages) throw new Error(json.error ?? "Could not load messages");
+    return json.messages;
+  }
+
+  deleteBoardMessage(token: string, siteKey: string, messageId: string) {
+    return this.call({ op: "deleteBoardMessage", siteKey, messageId }, token).then(({ status, json }) => {
+      if (json.ok) return { ok: true as const };
+      return { ok: false as const, status, error: json.error ?? "Could not delete the message" };
+    });
   }
 
   async collect(input: unknown, meta: CollectMeta): Promise<CollectResult> {

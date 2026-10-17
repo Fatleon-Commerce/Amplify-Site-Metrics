@@ -1,7 +1,9 @@
 import type {
   DailyRecord,
   EventRecord,
+  MessageRecord,
   PageDayRecord,
+  PostRate,
   Repo,
   SiteRecord,
   VisitorRecord,
@@ -13,10 +15,12 @@ type Data = {
   events: EventRecord[];
   days: DailyRecord[];
   pages: PageDayRecord[];
+  messages: MessageRecord[];
+  rates: PostRate[];
 };
 
 function empty(): Data {
-  return { sites: [], visitors: [], events: [], days: [], pages: [] };
+  return { sites: [], visitors: [], events: [], days: [], pages: [], messages: [], rates: [] };
 }
 
 export class MemoryRepo implements Repo {
@@ -39,6 +43,8 @@ export class MemoryRepo implements Repo {
 
   async deleteSite(siteKey: string): Promise<void> {
     this.data.sites = this.data.sites.filter((site) => site.siteKey !== siteKey);
+    this.data.messages = this.data.messages.filter((message) => message.siteKey !== siteKey);
+    this.data.rates = this.data.rates.filter((rate) => rate.siteKey !== siteKey);
   }
 
   async listSites(): Promise<SiteRecord[]> {
@@ -137,5 +143,34 @@ export class MemoryRepo implements Repo {
 
   async listPageDays(siteKey: string, from: string, to: string): Promise<PageDayRecord[]> {
     return this.data.pages.filter((page) => page.siteKey === siteKey && page.date >= from && page.date <= to);
+  }
+
+  async listMessages(siteKey: string, limit: number): Promise<MessageRecord[]> {
+    return this.data.messages
+      .filter((message) => message.siteKey === siteKey)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.messageId.localeCompare(a.messageId))
+      .slice(0, limit);
+  }
+
+  async insertMessage(message: MessageRecord): Promise<void> {
+    this.data.messages.push(message);
+  }
+
+  async deleteMessage(siteKey: string, messageId: string): Promise<boolean> {
+    const before = this.data.messages.length;
+    this.data.messages = this.data.messages.filter(
+      (message) => message.siteKey !== siteKey || message.messageId !== messageId,
+    );
+    return this.data.messages.length !== before;
+  }
+
+  async getPostRate(siteKey: string, ip: string): Promise<PostRate | null> {
+    return this.data.rates.find((rate) => rate.siteKey === siteKey && rate.ip === ip) ?? null;
+  }
+
+  async putPostRate(rate: PostRate): Promise<void> {
+    const index = this.data.rates.findIndex((item) => item.siteKey === rate.siteKey && item.ip === rate.ip);
+    if (index === -1) this.data.rates.push(rate);
+    else this.data.rates[index] = rate;
   }
 }

@@ -55,3 +55,37 @@ export function verifyToken(password: string, token: string, now = Date.now()): 
     return false;
   }
 }
+
+export function signBoardStamp(password: string, siteKey: string, iat = Date.now()): string {
+  const payload = Buffer.from(JSON.stringify({ kind: "board", siteKey, iat })).toString("base64url");
+  const signature = createHmac("sha256", password).update(`board.${payload}`).digest("base64url");
+  return `${payload}.${signature}`;
+}
+
+export function boardStampAge(password: string, token: string, siteKey: string, now = Date.now()): number | null {
+  if (!password || !token) return null;
+  const parts = token.split(".");
+  if (parts.length !== 2) return null;
+  const [payload, signature] = parts;
+  if (!payload || !signature) return null;
+  const expected = createHmac("sha256", password).update(`board.${payload}`).digest("base64url");
+  const actualBuffer = Buffer.from(signature);
+  const expectedBuffer = Buffer.from(expected);
+  if (actualBuffer.length !== expectedBuffer.length) return null;
+  if (!timingSafeEqual(actualBuffer, expectedBuffer)) return null;
+  try {
+    const body = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as {
+      kind?: unknown;
+      siteKey?: unknown;
+      iat?: unknown;
+    };
+    if (body.kind !== "board" || body.siteKey !== siteKey || typeof body.iat !== "number" || !Number.isFinite(body.iat)) {
+      return null;
+    }
+    const age = now - body.iat;
+    if (age < 0) return null;
+    return age;
+  } catch {
+    return null;
+  }
+}

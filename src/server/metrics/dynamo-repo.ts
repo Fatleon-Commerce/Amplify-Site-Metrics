@@ -11,7 +11,9 @@ import {
 import type {
   DailyRecord,
   EventRecord,
+  MessageRecord,
   PageDayRecord,
+  PostRate,
   Repo,
   SiteRecord,
   VisitorRecord,
@@ -41,6 +43,30 @@ function siteFrom(item: Item): SiteRecord {
     createdAt: requiredString(item, "createdAt"),
     pageviewCount: requiredNumber(item, "pageviewCount"),
     visitorCount: requiredNumber(item, "visitorCount"),
+    guestbookEnabled: item.guestbookEnabled === true,
+  };
+}
+
+function messageFrom(item: Item): MessageRecord {
+  return {
+    siteKey: requiredString(item, "siteKey"),
+    messageId: requiredString(item, "messageId"),
+    name: requiredString(item, "name"),
+    body: requiredString(item, "body"),
+    createdAt: requiredString(item, "createdAt"),
+    ip: requiredString(item, "ip"),
+  };
+}
+
+function rateFrom(item: Item): PostRate {
+  return {
+    siteKey: requiredString(item, "siteKey"),
+    ip: requiredString(item, "ip"),
+    windowStart: requiredNumber(item, "windowStart"),
+    count: requiredNumber(item, "count"),
+    lastAt: requiredNumber(item, "lastAt"),
+    lastBody: requiredString(item, "lastBody"),
+    ttl: requiredNumber(item, "ttl"),
   };
 }
 
@@ -139,6 +165,8 @@ export class DynamoRepo implements Repo {
     await this.client.send(
       new DeleteCommand({ TableName: this.tableName, Key: { pk: "SITE", sk: siteKey } }),
     );
+    await this.deleteByPk(`MSG#${siteKey}`);
+    await this.deleteByPk(`RATE#${siteKey}`);
   }
 
   async listSites(): Promise<SiteRecord[]> {
@@ -330,6 +358,86 @@ export class DynamoRepo implements Repo {
         ttl: requiredNumber(item, "ttl"),
       }))
       .filter((page) => page.date >= from && page.date <= to && page.path);
+  }
+
+  async listMessages(siteKey: string, limit: number): Promise<MessageRecord[]> {
+    const result = await this.client.send(
+      new QueryCommand({
+        TableName: this.tableName,
+        IndexName: "byRecent",
+        KeyConditionExpression: "gsi1pk = :pk",
+        ExpressionAttributeValues: { ":pk": `MSG#${siteKey}` },
+        ScanIndexForward: false,
+        Limit: limit,
+      }),
+    );
+    return (result.Items ?? []).map(messageFrom);
+  }
+
+  async insertMessage(message: MessageRecord): Promise<void> {
+    await this.client.send(
+      new PutCommand({
+        TableName: this.tableName,
+        Item: {
+          pk: `MSG#${message.siteKey}`,
+          sk: message.messageId,
+          gsi1pk: `MSG#${message.siteKey}`,
+          gsi1sk: `${message.createdAt}#${message.messageId}`,
+          entity: "message",
+          ...message,
+        },
+      }),
+    );
+  }
+
+  async deleteMessage(siteKey: string, messageId: string): Promise<boolean> {
+    try {
+      await this.client.send(
+        new DeleteCommand({
+          TableName: this.tableName,
+          Key: { pk: `MSG#${siteKey}`, sk: messageId },
+          ConditionExpression: "attribute_exists(pk)",
+        }),
+      );
+      return true;
+    } catch (error) {
+      if ((error as { name?: string }).name === "ConditionalCheckFailedException") return false;
+      throw error;
+    }
+  }
+
+  async getPostRate(siteKey: string, ip: string): Promise<PostRate | null> {
+    const result = await this.client.send(
+      new GetCommand({ TableName: this.tableName, Key: { pk: `RATE#${siteKey}`, sk: ip } }),
+    );
+    return result.Item ? rateFrom(result.Item) : null;
+  }
+
+  async putPostRate(rate: PostRate): Promise<void> {
+    await this.client.send(
+      new PutCommand({
+        TableName: this.tableName,
+        Item: {
+          pk: `RATE#${rate.siteKey}`,
+          sk: rate.ip,
+          entity: "rate",
+          ...rate,
+        },
+      }),
+    );
+  }
+
+  private async deleteByPk(pk: string): Promise<void> {
+    const items = await this.queryAll({
+      TableName: this.tableName,
+      KeyConditionExpression: "pk = :pk",
+      ExpressionAttributeValues: { ":pk": pk },
+    });
+    for (const item of items) {
+      const sk = item.sk;
+      if (typeof sk !== "string") continue;
+      await this.client.send(new DeleteCommand({ TableName: this.tableName, Key: { pk, sk } }));
+    }
   }
 
   private async queryAll(input: ConstructorParameters<typeof QueryCommand>[0]): Promise<Item[]> {

@@ -1,5 +1,12 @@
 import { DynamoRepo } from "../../../src/server/metrics/dynamo-repo";
 import {
+  deleteBoardMessage,
+  loadBoardMessages,
+  openBoard,
+  postBoard,
+  setGuestbookEnabled,
+} from "../../../src/server/metrics/board";
+import {
   collectEvent,
   createNamedSite,
   listSiteSummaries,
@@ -90,11 +97,29 @@ export const handler = async (event: FunctionUrlEvent) => {
       return respond(200, { ok: true });
     }
 
-    if (op === "siteExists") {
+    if (op === "siteConfig") {
       const siteKey = typeof body.siteKey === "string" ? body.siteKey : "";
-      if (!isSiteKey(siteKey)) return respond(200, { ok: true, exists: false });
+      if (!isSiteKey(siteKey)) return respond(200, { ok: true, exists: false, guestbookEnabled: false });
       const site = await store().getSite(siteKey);
-      return respond(200, { ok: true, exists: Boolean(site) });
+      return respond(200, {
+        ok: true,
+        exists: Boolean(site),
+        guestbookEnabled: site?.guestbookEnabled === true,
+      });
+    }
+
+    if (op === "boardOpen") {
+      const siteKey = typeof body.siteKey === "string" ? body.siteKey : "";
+      const result = await openBoard(store(), siteKey, password());
+      if (!result.ok) return respond(result.status, { ok: false, error: result.error });
+      return respond(200, result);
+    }
+
+    if (op === "boardPost") {
+      const siteKey = typeof body.siteKey === "string" ? body.siteKey : "";
+      const result = await postBoard(store(), siteKey, body.input, metaFrom(body, event), password());
+      if (!result.ok) return respond(result.status, { ok: false, error: result.error });
+      return respond(200, result);
     }
 
     if (op === "collect") {
@@ -166,10 +191,32 @@ export const handler = async (event: FunctionUrlEvent) => {
       return respond(200, { ok: true, detail });
     }
 
+    if (op === "setGuestbook") {
+      const siteKey = typeof body.siteKey === "string" ? body.siteKey : "";
+      const result = await setGuestbookEnabled(store(), siteKey, body.enabled === true);
+      if (!result.ok) return respond(404, result);
+      return respond(200, result);
+    }
+
+    if (op === "boardMessages") {
+      const siteKey = typeof body.siteKey === "string" ? body.siteKey : "";
+      const messages = await loadBoardMessages(store(), siteKey);
+      if (!messages) return respond(404, { ok: false, error: "Unknown site" });
+      return respond(200, { ok: true, messages });
+    }
+
+    if (op === "deleteBoardMessage") {
+      const siteKey = typeof body.siteKey === "string" ? body.siteKey : "";
+      const messageId = typeof body.messageId === "string" ? body.messageId : "";
+      const result = await deleteBoardMessage(store(), siteKey, messageId);
+      if (!result.ok) return respond(result.status, result);
+      return respond(200, result);
+    }
+
     return respond(400, { ok: false, error: "Unknown operation" });
   } catch (error) {
     console.error(error);
-    const isPublic = op === "collect" || op === "siteExists";
+    const isPublic = op === "collect" || op === "siteConfig" || op === "boardOpen" || op === "boardPost";
     const message = !isPublic && error instanceof Error ? error.message : "Internal error";
     return respond(500, { ok: false, error: message });
   }

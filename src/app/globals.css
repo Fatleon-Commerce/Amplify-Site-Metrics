@@ -330,6 +330,13 @@ th { font-size: 13px; color: var(--muted); font-weight: 600; background: #fafbfc
   .summary-grid { grid-template-columns: 1fr; }
 }
 
+.guestbook .muted { margin: 0 0 8px; }
+.board-list { list-style: none; margin: 8px 0 0; padding: 0; }
+.board-list li { padding: 12px 0; border-top: 1px solid var(--line); }
+.board-row { align-items: center; }
+.board-body { margin: 6px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+button.tiny { padding: 4px 10px; font-size: 13px; }
+
 @media (max-width: 520px) {
   .stats { grid-template-columns: 1fr; }
   .time-row, .gap-row { grid-template-columns: 1fr; }

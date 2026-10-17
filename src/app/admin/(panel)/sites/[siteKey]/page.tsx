@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CopySnippet } from "@/components/CopySnippet";
 import { DeleteSiteButton } from "@/components/DeleteSiteButton";
+import { GuestbookAdmin } from "@/components/GuestbookAdmin";
 import { VisitorTable, type VisitorView } from "@/components/VisitorTable";
 import { EVENT_TTL_DAYS } from "@/lib/constants";
 import { formatDateTime, formatDuration, formatSpan, regionLabel, shortId, sourceLabel } from "@/lib/format";
@@ -19,11 +20,12 @@ export default async function SitePage({
 }) {
   if (!isSiteKey(params.siteKey)) notFound();
   const { token, backend } = await requireAdmin();
-  const [overview, visitors] = await Promise.all([
+  const [overview, visitors, messages] = await Promise.all([
     backend.overview(token, params.siteKey),
     backend.visitors(token, params.siteKey),
+    backend.boardMessages(token, params.siteKey),
   ]);
-  if (!overview || !visitors) notFound();
+  if (!overview || !visitors || !messages) notFound();
 
   const origin = publicOrigin();
   const snippet = `<script defer src="${origin}/${overview.site.siteKey}.js"></script>`;
@@ -76,6 +78,11 @@ export default async function SitePage({
           </p>
         </section>
       </header>
+      <GuestbookAdmin
+        siteKey={overview.site.siteKey}
+        enabled={overview.site.guestbookEnabled === true}
+        messages={messages}
+      />
       <section className="stats">
         <div className="card stat">
           <b>{overview.todayPageviews}</b>

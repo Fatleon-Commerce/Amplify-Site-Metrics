@@ -1,6 +1,13 @@
 import path from "node:path";
 import { FileRepo } from "./metrics/file-repo";
 import {
+  deleteBoardMessage as removeBoardMessage,
+  loadBoardMessages,
+  openBoard as readBoard,
+  postBoard as submitBoard,
+  setGuestbookEnabled,
+} from "./metrics/board";
+import {
   collectEvent,
   createNamedSite,
   listSiteSummaries,
@@ -42,8 +49,35 @@ export class FileBackend implements MetricsBackend {
     return Promise.resolve(tokenIsValid(this.password(), token));
   }
 
-  siteExists(siteKey: string): Promise<boolean> {
-    return serial(async () => Boolean(await this.repo.getSite(siteKey)));
+  siteConfig(siteKey: string): Promise<{ guestbookEnabled: boolean } | null> {
+    return serial(async () => {
+      const site = await this.repo.getSite(siteKey);
+      if (!site) return null;
+      return { guestbookEnabled: site.guestbookEnabled === true };
+    });
+  }
+
+  openBoard(siteKey: string) {
+    return serial(() => readBoard(this.repo, siteKey, this.password()));
+  }
+
+  postBoard(siteKey: string, input: unknown, meta: CollectMeta) {
+    return serial(() => submitBoard(this.repo, siteKey, input, meta, this.password()));
+  }
+
+  setGuestbook(token: string, siteKey: string, enabled: boolean) {
+    this.assertToken(token);
+    return serial(() => setGuestbookEnabled(this.repo, siteKey, enabled));
+  }
+
+  boardMessages(token: string, siteKey: string) {
+    this.assertToken(token);
+    return serial(() => loadBoardMessages(this.repo, siteKey));
+  }
+
+  deleteBoardMessage(token: string, siteKey: string, messageId: string) {
+    this.assertToken(token);
+    return serial(() => removeBoardMessage(this.repo, siteKey, messageId));
   }
 
   collect(input: unknown, meta: CollectMeta): Promise<CollectResult> {
