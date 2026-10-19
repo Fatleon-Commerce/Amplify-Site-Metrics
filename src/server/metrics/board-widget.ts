@@ -123,7 +123,7 @@ export function boardWidget(endpoint: string): string {
     emailInput.inputMode = "email";
     var text = el("textarea");
     text.maxLength = MAX_BODY;
-    text.placeholder = "Ask a question, report an issue, or share a suggestion";
+    text.placeholder = "Ask a question, report an issue, share a suggestion, or just say hi";
     text.setAttribute("aria-label", "Message");
     var hint = el("p", "hint");
     hint.textContent = "Leave your email if you'd like a response.";

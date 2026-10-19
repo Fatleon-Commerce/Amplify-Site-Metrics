@@ -255,7 +255,7 @@ test("guestbook widget is appended only when the board is on", () => {
   assert.match(source, /attachShadow/);
   assert.match(source, /https:\/\/metrics\.example\/api\/board\/abcd1234/);
   assert.match(source, /Send Feedback/);
-  assert.match(source, /Ask a question, report an issue, or share a suggestion/);
+  assert.match(source, /Ask a question, report an issue, share a suggestion, or just say hi/);
   assert.match(source, /Email \(optional\)/);
   assert.match(source, /Leave your email if you'd like a response\./);
   assert.match(source, /Sent\. Thank you\./);
