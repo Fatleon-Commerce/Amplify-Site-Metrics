@@ -42,7 +42,7 @@ test("file repo keeps a pageview across instances", async () => {
     const posted = await postBoard(
       repo,
       created.siteKey,
-      { body: "hello file", name: "Ada", stamp },
+      { body: "hello file", email: "ada@example.com", stamp },
       { now, ip: "203.0.113.9" },
       "secret-pass",
     );
@@ -51,6 +51,7 @@ test("file repo keeps a pageview across instances", async () => {
     const reloadedBoard = new FileRepo(filePath);
     const messages = await loadBoardMessages(reloadedBoard, created.siteKey);
     assert.equal(messages?.[0]?.body, "hello file");
+    assert.equal(messages?.[0]?.email, "ada@example.com");
     assert.equal((await reloadedBoard.getSite(created.siteKey))?.guestbookEnabled, true);
     await removeSite(reloadedBoard, created.siteKey);
     assert.equal(await new FileRepo(filePath).getSite(created.siteKey), null);

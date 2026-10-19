@@ -54,17 +54,24 @@ test("guestbook stays off until it is turned on", async () => {
 test("a message is stored as text and can be deleted", async () => {
   const { repo, siteKey } = await site();
   await setGuestbookEnabled(repo, siteKey, true);
-  const saved = await send(repo, siteKey, NOW, "  <b>hello</b>\nthere  ", { name: "  Ada  " });
+  const saved = await send(repo, siteKey, NOW, "  <b>hello</b>\nthere  ", { email: "  Ada@Example.com  " });
   assert.equal(saved.ok, true);
   if (!saved.ok || !saved.message) return;
   assert.equal(saved.message.body, "<b>hello</b>\nthere");
-  assert.equal(saved.message.name, "Ada");
+  assert.equal(saved.message.name, "");
+  assert.equal("email" in saved.message, false);
   assert.equal("ip" in saved.message, false);
 
   const listed = await openBoard(repo, siteKey, SECRET, NOW);
   assert.equal(listed.ok && listed.enabled && listed.messages[0]?.body, "<b>hello</b>\nthere");
+  assert.equal(listed.ok && listed.enabled && "email" in listed.messages[0], false);
   const admin = await loadBoardMessages(repo, siteKey);
+  assert.equal(admin?.[0]?.email, "ada@example.com");
   assert.equal(admin?.[0]?.ip, "203.0.113.8");
+
+  const badEmail = await send(repo, siteKey, new Date(NOW.getTime() + 21_000), "again", { email: "not-an-email" });
+  assert.equal(badEmail.ok, false);
+  if (!badEmail.ok) assert.equal(badEmail.error, "email");
 
   const removed = await deleteBoardMessage(repo, siteKey, saved.message.messageId);
   assert.equal(removed.ok, true);

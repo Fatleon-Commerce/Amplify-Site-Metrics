@@ -7,6 +7,7 @@ import { formatDateTime } from "@/lib/format";
 type GuestbookMessage = {
   messageId: string;
   name: string;
+  email?: string;
   body: string;
   createdAt: string;
   ip: string;
@@ -84,6 +85,7 @@ export function GuestbookAdmin({
                 <div>
                   <strong>{message.name || "Anonymous"}</strong>
                   <span className="muted"> {formatDateTime(message.createdAt)}</span>
+                  {message.email ? <span className="board-email">{message.email}</span> : null}
                   {message.ip ? <span className="sub mono">{message.ip}</span> : null}
                 </div>
                 <button

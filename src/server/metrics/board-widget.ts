@@ -1,4 +1,4 @@
-import { BOARD_LIST_LIMIT, BOARD_MAX_BODY, BOARD_MAX_NAME } from "../../lib/constants";
+import { BOARD_LIST_LIMIT, BOARD_MAX_BODY, BOARD_MAX_EMAIL } from "../../lib/constants";
 
 const CSS = `
 :host { font-family: system-ui, "PingFang SC", "Noto Sans SC", sans-serif; color: #1f2328; }
@@ -21,7 +21,8 @@ const CSS = `
 .msg strong { font-size: 13px; margin-right: 8px; }
 .msg time { color: #667085; font-size: 12px; }
 .msg p { margin: 4px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; line-height: 1.5; }
-.empty { margin: 8px 0 16px; color: #667085; font-size: 14px; }
+.list[hidden] { display: none; }
+.list[hidden] + form { border-top: 0; }
 form { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px 12px; border-top: 1px solid #e6e8ec; }
 input, textarea {
   font: inherit; color: #1f2328; background: #fff; border: 1px solid #e6e8ec; border-radius: 8px; padding: 8px 10px;
@@ -30,7 +31,9 @@ textarea { resize: vertical; min-height: 72px; max-height: 140px; }
 form button { border: 0; background: #0b57d0; color: #fff; border-radius: 8px; padding: 8px 12px; cursor: pointer; }
 form button:disabled { opacity: 0.6; cursor: default; }
 .status { margin: 0; color: #b42318; font-size: 13px; }
+.status.ok { color: #137333; }
 .status:empty { display: none; }
+.hint { margin: 0; color: #667085; font-size: 12px; line-height: 1.4; }
 .hp { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0; overflow: hidden; clip: rect(0 0 0 0); }
 .launcher:focus-visible, .head button:focus-visible, form button:focus-visible { outline: 2px solid #b9d0fb; outline-offset: 2px; }
 @media (max-width: 640px) {
@@ -38,7 +41,7 @@ form button:disabled { opacity: 0.6; cursor: default; }
     position: fixed; left: 12px; right: 12px; bottom: calc(72px + env(safe-area-inset-bottom, 0px));
     width: auto; max-height: 70vh;
   }
-  .list { max-height: calc(70vh - 240px); }
+  .list { max-height: calc(70vh - 268px); }
 }
 @media print { :host { display: none; } }
 `;
@@ -54,7 +57,7 @@ export function boardWidget(endpoint: string): string {
   window.__siteBoard = 1;
   var endpoint = ${url};
   var MAX_BODY = ${BOARD_MAX_BODY};
-  var MAX_NAME = ${BOARD_MAX_NAME};
+  var MAX_EMAIL = ${BOARD_MAX_EMAIL};
   var open = false;
   var loaded = false;
   var loading = false;
@@ -86,7 +89,7 @@ export function boardWidget(endpoint: string): string {
     style.textContent = ${css};
     var launcher = el("button", "launcher");
     launcher.type = "button";
-    launcher.setAttribute("aria-label", "Guestbook");
+    launcher.setAttribute("aria-label", "Send Feedback");
     launcher.setAttribute("aria-expanded", "false");
     launcher.innerHTML = ${icon};
     var panel = el("div", "panel");
@@ -95,7 +98,7 @@ export function boardWidget(endpoint: string): string {
     launcher.setAttribute("aria-controls", panel.id);
     var head = el("div", "head");
     var title = el("strong");
-    title.textContent = "Guestbook";
+    title.textContent = "Send Feedback";
     var closeBtn = el("button");
     closeBtn.type = "button";
     closeBtn.setAttribute("aria-label", "Close");
@@ -111,23 +114,28 @@ export function boardWidget(endpoint: string): string {
     honey.setAttribute("aria-hidden", "true");
     honey.autocomplete = "off";
     honey.name = "company";
-    var nameInput = el("input");
-    nameInput.type = "text";
-    nameInput.maxLength = MAX_NAME;
-    nameInput.placeholder = "Name (optional)";
-    nameInput.setAttribute("aria-label", "Name");
-    nameInput.autocomplete = "nickname";
+    var emailInput = el("input");
+    emailInput.type = "email";
+    emailInput.maxLength = MAX_EMAIL;
+    emailInput.placeholder = "Email (optional)";
+    emailInput.setAttribute("aria-label", "Email");
+    emailInput.autocomplete = "email";
+    emailInput.inputMode = "email";
     var text = el("textarea");
     text.maxLength = MAX_BODY;
-    text.placeholder = "Write a message";
+    text.placeholder = "Ask a question, report an issue, or share a suggestion";
     text.setAttribute("aria-label", "Message");
+    var hint = el("p", "hint");
+    hint.textContent = "Leave your email if you'd like a response.";
     var submitBtn = el("button");
     submitBtn.type = "submit";
     submitBtn.textContent = "Send";
+    form.noValidate = true;
     form.appendChild(honey);
-    form.appendChild(nameInput);
+    form.appendChild(emailInput);
     form.appendChild(text);
     form.appendChild(status);
+    form.appendChild(hint);
     form.appendChild(submitBtn);
     panel.appendChild(head);
     panel.appendChild(list);
@@ -137,14 +145,15 @@ export function boardWidget(endpoint: string): string {
     root.appendChild(launcher);
     document.body.appendChild(host);
 
+    list.hidden = true;
+    function note(text, ok) {
+      status.className = ok ? "status ok" : "status";
+      status.textContent = text;
+    }
     function render() {
       list.textContent = "";
-      if (!items.length) {
-        var empty = el("p", "empty");
-        empty.textContent = "No messages yet";
-        list.appendChild(empty);
-        return;
-      }
+      list.hidden = items.length === 0;
+      if (!items.length) return;
       for (var index = 0; index < items.length; index += 1) {
         var item = items[index];
         var box = el("div", "msg");
@@ -174,7 +183,7 @@ export function boardWidget(endpoint: string): string {
     function load() {
       if (loaded || loading) return;
       loading = true;
-      status.textContent = "Loading…";
+      note("Loading…", false);
       fetch(endpoint, { headers: { accept: "application/json" }, cache: "no-store", credentials: "omit", mode: "cors" })
         .then(function (response) { return response.json(); })
         .then(function (data) {
@@ -184,28 +193,29 @@ export function boardWidget(endpoint: string): string {
           stamp = data.stamp || "";
           items = data.enabled === false ? [] : (data.messages || []);
           form.hidden = data.enabled === false;
-          status.textContent = data.enabled === false ? "Guestbook is off" : "";
+          note(data.enabled === false ? "Guestbook is off" : "", false);
           render();
         })
         .catch(function () {
           loading = false;
-          status.textContent = "Could not load messages";
+          note("Could not load messages", false);
         });
     }
     function fail(code) {
-      if (code === "wait") status.textContent = "Wait a few seconds and try again";
-      else if (code === "rate") status.textContent = "Too many messages. Try again later";
-      else if (code === "duplicate") status.textContent = "You already sent this";
-      else if (code === "large") status.textContent = "Message is too long";
-      else if (code === "empty") status.textContent = "Write a message first";
-      else if (code === "closed") { form.hidden = true; status.textContent = "Guestbook is off"; }
+      if (code === "wait") note("Wait a few seconds and try again", false);
+      else if (code === "rate") note("Too many messages. Try again later", false);
+      else if (code === "duplicate") note("You already sent this", false);
+      else if (code === "large") note("Message is too long", false);
+      else if (code === "empty") note("Write a message first", false);
+      else if (code === "email") note("Enter a valid email", false);
+      else if (code === "closed") { form.hidden = true; note("Guestbook is off", false); }
       else if (code === "stamp") {
-        status.textContent = "Try again";
+        note("Try again", false);
         fetch(endpoint, { cache: "no-store", credentials: "omit", mode: "cors" })
           .then(function (response) { return response.json(); })
           .then(function (data) { if (data && data.stamp) stamp = data.stamp; })
           .catch(function () {});
-      } else status.textContent = "Could not send";
+      } else note("Could not send", false);
     }
     launcher.addEventListener("click", function () { setOpen(!open); });
     closeBtn.addEventListener("click", function () { close(); });
@@ -227,18 +237,22 @@ export function boardWidget(endpoint: string): string {
       event.preventDefault();
       if (pending || form.hidden) return;
       var body = String(text.value || "").replace(/^\\s+|\\s+$/g, "");
-      var name = String(nameInput.value || "").replace(/^\\s+|\\s+$/g, "");
-      if (!body) { status.textContent = "Write a message first"; return; }
+      var email = String(emailInput.value || "").replace(/^\\s+|\\s+$/g, "");
+      if (!body) { note("Write a message first", false); return; }
+      if (email && (email.length > MAX_EMAIL || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email))) {
+        note("Enter a valid email", false);
+        return;
+      }
       pending = true;
       submitBtn.disabled = true;
       submitBtn.textContent = "Sending…";
-      status.textContent = "";
+      note("", false);
       fetch(endpoint, {
         method: "POST",
         headers: { "content-type": "application/json" },
         credentials: "omit",
         mode: "cors",
-        body: JSON.stringify({ body: body, name: name, company: honey.value, stamp: stamp })
+        body: JSON.stringify({ body: body, email: email, company: honey.value, stamp: stamp })
       }).then(function (response) {
         return response.json().then(function (data) { return data || {}; }, function () { return {}; });
       }).then(function (data) {
@@ -248,15 +262,13 @@ export function boardWidget(endpoint: string): string {
         if (data.ok === true && data.message) {
           items.unshift(data.message);
           if (items.length > ${BOARD_LIST_LIMIT}) items.length = ${BOARD_LIST_LIMIT};
-          text.value = "";
-          stamp = data.stamp || stamp;
-          status.textContent = "";
-          render();
-          return;
         }
         if (data.ok === true) {
           text.value = "";
-          status.textContent = "";
+          emailInput.value = "";
+          stamp = data.stamp || stamp;
+          note("Sent. Thank you.", true);
+          render();
           return;
         }
         fail(data.error);
@@ -264,7 +276,7 @@ export function boardWidget(endpoint: string): string {
         pending = false;
         submitBtn.disabled = false;
         submitBtn.textContent = "Send";
-        status.textContent = "Could not send";
+        note("Could not send", false);
       });
     });
   }

@@ -1,7 +1,7 @@
 import {
   BOARD_LIST_LIMIT,
   BOARD_MAX_BODY,
-  BOARD_MAX_NAME,
+  BOARD_MAX_EMAIL,
   BOARD_MIN_DELAY_MS,
   BOARD_MIN_GAP_MS,
   BOARD_RATE_LIMIT,
@@ -35,13 +35,12 @@ function cleanBody(value: unknown): string {
     .trim();
 }
 
-function cleanName(value: unknown): string {
-  if (typeof value !== "string") return "";
-  return value
-    .replace(/[\u0000-\u001F]/g, " ")
-    .trim()
-    .replace(/\s+/g, " ")
-    .slice(0, BOARD_MAX_NAME);
+function cleanEmail(value: unknown): string | null {
+  if (typeof value !== "string") return value == null ? "" : null;
+  const email = value.trim().toLowerCase();
+  if (!email) return "";
+  if (email.length > BOARD_MAX_EMAIL || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return null;
+  return email;
 }
 
 export function publishMessage(message: MessageRecord): PublicBoardMessage {
@@ -130,7 +129,8 @@ export async function postBoard(
   const text = cleanBody(body.body);
   if (!text) return { ok: false, status: 400, error: "empty" };
   if (text.length > BOARD_MAX_BODY) return { ok: false, status: 400, error: "large" };
-  const name = cleanName(body.name);
+  const email = cleanEmail(body.email);
+  if (email === null) return { ok: false, status: 400, error: "email" };
 
   const ip = clip(meta.ip, 64) || "unknown";
   const rate = await repo.getPostRate(siteKey, ip);
@@ -143,7 +143,8 @@ export async function postBoard(
   const message: MessageRecord = {
     siteKey,
     messageId: createMessageId(),
-    name,
+    name: "",
+    email,
     body: text,
     createdAt: now.toISOString(),
     ip,

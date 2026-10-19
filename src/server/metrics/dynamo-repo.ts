@@ -52,6 +52,7 @@ function messageFrom(item: Item): MessageRecord {
     siteKey: requiredString(item, "siteKey"),
     messageId: requiredString(item, "messageId"),
     name: requiredString(item, "name"),
+    email: requiredString(item, "email"),
     body: requiredString(item, "body"),
     createdAt: requiredString(item, "createdAt"),
     ip: requiredString(item, "ip"),

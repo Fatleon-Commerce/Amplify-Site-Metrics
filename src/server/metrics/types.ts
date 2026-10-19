@@ -11,6 +11,7 @@ export type MessageRecord = {
   siteKey: string;
   messageId: string;
   name: string;
+  email: string;
   body: string;
   createdAt: string;
   ip: string;
