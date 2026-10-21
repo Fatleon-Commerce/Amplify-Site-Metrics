@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import type { BoardOpenResult, BoardPostResult } from "./metrics/board";
-import type { CollectMeta, CollectResult, LoginResult, MessageRecord, Overview, PageReport, SiteSummary, VisitorDetail, VisitorRecord } from "./metrics/types";
+import type { CollectMeta, CollectResult, LoginResult, MessageRecord, Overview, PageDetail, PageReport, SiteSummary, VisitorDetail, VisitorRecord } from "./metrics/types";
 
 export class AuthError extends Error {
   constructor() {
@@ -29,6 +29,7 @@ export interface MetricsBackend {
   deleteSite(token: string, siteKey: string): Promise<{ ok: true } | { ok: false; error: string }>;
   overview(token: string, siteKey: string): Promise<Overview | null>;
   pages(token: string, siteKey: string, from: string, to: string): Promise<PageReport | null>;
+  pageDetail(token: string, siteKey: string, path: string, from: string, to: string): Promise<PageDetail | null>;
   visitors(token: string, siteKey: string): Promise<VisitorRecord[] | null>;
   detail(token: string, siteKey: string, visitorId: string): Promise<VisitorDetail | null>;
   saveNote(

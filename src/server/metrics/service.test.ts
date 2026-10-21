@@ -9,6 +9,7 @@ import {
   listSiteSummaries,
   loadDetail,
   loadOverview,
+  loadPageDetail,
   loadPageReport,
   loginWithPassword,
   pagePath,
@@ -173,15 +174,115 @@ test("page counts merge query strings and split by day", async () => {
     { now: nextDay },
   );
   const oneDay = await loadPageReport(repo, siteKey, "2026-10-16", "2026-10-16");
-  assert.deepEqual(oneDay?.pages, [{ path: "/shop", pageviews: 3 }]);
+  assert.deepEqual(oneDay?.pages, [{ path: "/shop", pageviews: 3, visitors: 1 }]);
   const week = await loadPageReport(repo, siteKey, "2026-10-11", "2026-10-17");
   assert.deepEqual(week?.pages, [
-    { path: "/shop", pageviews: 3 },
-    { path: "/about/", pageviews: 1 },
+    { path: "/shop", pageviews: 3, visitors: 1 },
+    { path: "/about/", pageviews: 1, visitors: 1 },
   ]);
   assert.equal(await loadPageReport(repo, siteKey, "2026-10-01", "2026-10-17"), null);
   const detail = await loadDetail(repo, siteKey, VISITOR);
   assert.equal(detail?.events[0]?.path, "/shop?utm_source=bing");
+});
+
+test("page detail splits visitors by source, device, and country", async () => {
+  const repo = new MemoryRepo();
+  const siteKey = await site(repo);
+  const chrome =
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36";
+  const iphone =
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit Version/17.0 Mobile/15E148 Safari/604.1";
+
+  await collectEvent(repo, view("event0001", { siteKey, path: "/shop?utm_source=bing" }), {
+    now: NOW,
+    country: "CN",
+    userAgent: chrome,
+  });
+  await collectEvent(repo, view("event0002", { siteKey, path: "/shop" }), {
+    now: new Date(NOW.getTime() + 60_000),
+    country: "CN",
+    userAgent: chrome,
+  });
+  await collectEvent(
+    repo,
+    view("event0003", {
+      siteKey,
+      path: "/shop",
+      visitorId: "visitor22222222222222",
+      sessionId: "session222222222222",
+      referrer: "https://www.baidu.com/s?wd=kit",
+    }),
+    { now: NOW, country: "US", city: "Austin", userAgent: iphone },
+  );
+  await collectEvent(
+    repo,
+    view("event0004", {
+      siteKey,
+      path: "/about",
+      visitorId: "visitor33333333333333",
+      sessionId: "session333333333333",
+      referrer: "",
+    }),
+    { now: NOW, country: "JP", userAgent: chrome },
+  );
+
+  const shop = await loadPageDetail(repo, siteKey, "/shop?x=1", "2026-10-16", "2026-10-16");
+  assert.equal(shop?.path, "/shop");
+  assert.equal(shop?.pageviews, 3);
+  assert.equal(shop?.visitors, 2);
+  assert.equal(shop?.entrances, 2);
+  assert.deepEqual(shop?.sources, [
+    { key: "baidu", count: 1 },
+    { key: "google", count: 1 },
+  ]);
+  assert.deepEqual(shop?.devices, [
+    { key: "iOS · Safari", count: 1 },
+    { key: "macOS · Chrome", count: 1 },
+  ]);
+  assert.deepEqual(shop?.countries, [
+    { key: "CN", count: 1 },
+    { key: "US", count: 1 },
+  ]);
+
+  await collectEvent(
+    repo,
+    {
+      op: "pageleave",
+      siteKey,
+      visitorId: VISITOR,
+      sessionId: SESSION,
+      eventId: "event0002",
+      durationMs: 12000,
+      occurredAt: new Date(NOW.getTime() + 70_000).toISOString(),
+    },
+    { now: new Date(NOW.getTime() + 70_000) },
+  );
+  const after = await loadPageDetail(repo, siteKey, "/shop", "2026-10-16", "2026-10-16");
+  assert.equal(after?.durationMs, 12000);
+  assert.equal(after?.durationCount, 1);
+
+  const nextDay = new Date("2026-10-16T16:30:00.000Z");
+  await collectEvent(
+    repo,
+    view("event0005", { siteKey, path: "/shop", occurredAt: nextDay.toISOString() }),
+    { now: nextDay, country: "CN", userAgent: chrome },
+  );
+  const week = await loadPageDetail(repo, siteKey, "/shop", "2026-10-16", "2026-10-17");
+  assert.equal(week?.pageviews, 4);
+  assert.equal(week?.visitors, 3);
+  assert.equal(week?.entrances, 3);
+  assert.equal(week?.sources.find((item) => item.key === "google")?.count, 2);
+  assert.deepEqual(
+    week?.days.map((day) => day.pageviews),
+    [3, 1],
+  );
+
+  const about = await loadPageDetail(repo, siteKey, "/about", "2026-10-16", "2026-10-16");
+  assert.equal(about?.visitors, 1);
+  assert.equal(about?.entrances, 1);
+  assert.equal(about?.sources[0]?.key, "direct");
+  assert.equal(about?.countries[0]?.key, "JP");
+  assert.equal(await loadPageDetail(repo, siteKey, "/shop", "2026-10-01", "2026-10-17"), null);
 });
 
 test("unknown sites and bots are ignored", async () => {

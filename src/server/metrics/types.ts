@@ -57,6 +57,8 @@ export type VisitorRecord = {
   currentSessionId: string;
   activeMs: number;
   countedDay: string;
+  countedPageDay: string;
+  countedPaths: string;
   ttl: number;
   rateWindowMinute: number;
   rateCount: number;
@@ -84,12 +86,53 @@ export type DailyRecord = {
   ttl: number;
 };
 
+export type CountMap = Record<string, number>;
+
 export type PageDayRecord = {
   siteKey: string;
   date: string;
   path: string;
   pageviews: number;
+  visitors: number;
+  entrances: number;
+  durationMs: number;
+  durationCount: number;
+  sources: CountMap;
+  devices: CountMap;
+  countries: CountMap;
   ttl: number;
+};
+
+export type PageDayDelta = {
+  pageviews?: number;
+  visitors?: number;
+  entrances?: number;
+  durationMs?: number;
+  durationCount?: number;
+  sources?: CountMap;
+  devices?: CountMap;
+  countries?: CountMap;
+};
+
+export type PageSlice = {
+  key: string;
+  count: number;
+};
+
+export type PageDetail = {
+  site: SiteRecord;
+  path: string;
+  from: string;
+  to: string;
+  pageviews: number;
+  visitors: number;
+  entrances: number;
+  durationMs: number;
+  durationCount: number;
+  sources: PageSlice[];
+  devices: PageSlice[];
+  countries: PageSlice[];
+  days: Array<{ date: string; pageviews: number; visitors: number }>;
 };
 
 export type SiteSummary = SiteRecord & {
@@ -109,7 +152,7 @@ export type PageReport = {
   site: SiteRecord;
   from: string;
   to: string;
-  pages: Array<{ path: string; pageviews: number }>;
+  pages: Array<{ path: string; pageviews: number; visitors: number }>;
 };
 
 export type VisitorDetail = {
@@ -151,7 +194,7 @@ export interface Repo {
   listVisitors(siteKey: string, limit: number): Promise<VisitorRecord[]>;
   addDaily(siteKey: string, date: string, pageviews: number, uniques: number, ttl: number): Promise<void>;
   getDailies(siteKey: string, dates: string[]): Promise<DailyRecord[]>;
-  addPageDay(siteKey: string, date: string, path: string, pageviews: number, ttl: number): Promise<void>;
+  addPageDay(siteKey: string, date: string, path: string, delta: PageDayDelta, ttl: number): Promise<void>;
   listPageDays(siteKey: string, from: string, to: string): Promise<PageDayRecord[]>;
   listMessages(siteKey: string, limit: number): Promise<MessageRecord[]>;
   insertMessage(message: MessageRecord): Promise<void>;

@@ -7,6 +7,7 @@ import type {
   LoginResult,
   MessageRecord,
   Overview,
+  PageDetail,
   PageReport,
   SiteSummary,
   VisitorDetail,
@@ -22,6 +23,7 @@ type Envelope = {
   sites?: SiteSummary[];
   overview?: Overview;
   report?: PageReport;
+  page?: PageDetail;
   visitors?: VisitorRecord[];
   detail?: VisitorDetail;
   guestbookEnabled?: boolean;
@@ -155,6 +157,19 @@ export class RemoteBackend implements MetricsBackend {
     if (status === 404) return null;
     if (status !== 200 || !json.report) throw new Error(json.error ?? "Could not load pages");
     return json.report;
+  }
+
+  async pageDetail(
+    token: string,
+    siteKey: string,
+    path: string,
+    from: string,
+    to: string,
+  ): Promise<PageDetail | null> {
+    const { status, json } = await this.call({ op: "page", siteKey, path, from, to }, token);
+    if (status === 404) return null;
+    if (status !== 200 || !json.page) throw new Error(json.error ?? "Could not load the page");
+    return json.page;
   }
 
   async visitors(token: string, siteKey: string): Promise<VisitorRecord[] | null> {

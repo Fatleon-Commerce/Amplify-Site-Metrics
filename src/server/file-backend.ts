@@ -13,6 +13,7 @@ import {
   listSiteSummaries,
   loadDetail,
   loadOverview,
+  loadPageDetail,
   loadPageReport,
   loadVisitors,
   loginWithPassword,
@@ -21,7 +22,7 @@ import {
   tokenIsValid,
 } from "./metrics/service";
 import { AuthError, type MetricsBackend } from "./backend";
-import type { CollectMeta, CollectResult, LoginResult, Overview, PageReport, SiteSummary, VisitorDetail, VisitorRecord } from "./metrics/types";
+import type { CollectMeta, CollectResult, LoginResult, Overview, PageDetail, PageReport, SiteSummary, VisitorDetail, VisitorRecord } from "./metrics/types";
 
 let queue: Promise<unknown> = Promise.resolve();
 
@@ -107,6 +108,11 @@ export class FileBackend implements MetricsBackend {
   pages(token: string, siteKey: string, from: string, to: string): Promise<PageReport | null> {
     this.assertToken(token);
     return serial(() => loadPageReport(this.repo, siteKey, from, to));
+  }
+
+  pageDetail(token: string, siteKey: string, path: string, from: string, to: string): Promise<PageDetail | null> {
+    this.assertToken(token);
+    return serial(() => loadPageDetail(this.repo, siteKey, path, from, to));
   }
 
   visitors(token: string, siteKey: string): Promise<VisitorRecord[] | null> {

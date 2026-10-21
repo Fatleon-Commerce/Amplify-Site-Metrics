@@ -1,5 +1,7 @@
+import { createHash } from "node:crypto";
 import { DAILY_TTL_DAYS, EVENT_TTL_DAYS, MAX_DURATION_MS, VISIT_GAP_MS } from "../../lib/constants";
-import { clip, createSiteKey, dayKey, isClientId, isDayKey, isSiteKey, recentDayKeys, ttlAfter } from "./ids";
+import { clip, createSiteKey, dayKey, isClientId, isDayKey, isSiteKey, nextDayKey, recentDayKeys, ttlAfter } from "./ids";
+import { addCount, mergeCounts, slices } from "./page-day";
 import { clampOccurredAt, isBot, parseDevice, trafficSource } from "./parse";
 import {
   clearLoginAttempts,
@@ -14,7 +16,9 @@ import type {
   CollectResult,
   EventRecord,
   LoginResult,
+  CountMap,
   Overview,
+  PageDetail,
   PageReport,
   Repo,
   SiteRecord,
@@ -74,6 +78,8 @@ function blankVisitor(input: {
     currentSessionId: input.sessionId,
     activeMs: 0,
     countedDay: "",
+    countedPageDay: "",
+    countedPaths: "",
     ttl: ttlAfter(EVENT_TTL_DAYS, input.now),
     rateWindowMinute: 0,
     rateCount: 0,
@@ -191,12 +197,88 @@ export async function loadPageReport(
   const site = await repo.getSite(siteKey);
   if (!site) return null;
   const rows = await repo.listPageDays(siteKey, from, to);
-  const totals = new Map<string, number>();
-  for (const row of rows) totals.set(row.path, (totals.get(row.path) ?? 0) + row.pageviews);
+  const totals = new Map<string, { pageviews: number; visitors: number }>();
+  for (const row of rows) {
+    const current = totals.get(row.path) ?? { pageviews: 0, visitors: 0 };
+    current.pageviews += row.pageviews ?? 0;
+    current.visitors += row.visitors ?? 0;
+    totals.set(row.path, current);
+  }
   const pages = [...totals.entries()]
-    .map(([path, pageviews]) => ({ path, pageviews }))
+    .map(([path, total]) => ({ path, pageviews: total.pageviews, visitors: total.visitors }))
+    .filter((page) => page.pageviews > 0)
     .sort((a, b) => b.pageviews - a.pageviews || a.path.localeCompare(b.path));
   return { site, from, to, pages };
+}
+
+function datesBetween(from: string, to: string): string[] {
+  const dates: string[] = [];
+  let cursor = from;
+  while (cursor <= to && dates.length < 8) {
+    dates.push(cursor);
+    const next = nextDayKey(cursor);
+    if (next <= cursor) break;
+    cursor = next;
+  }
+  return dates;
+}
+
+export async function loadPageDetail(
+  repo: Repo,
+  siteKey: string,
+  rawPath: string,
+  from: string,
+  to: string,
+): Promise<PageDetail | null> {
+  if (!isSiteKey(siteKey) || !isDayKey(from) || !isDayKey(to) || from > to) return null;
+  const span = Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86400000);
+  if (span > 6) return null;
+  const site = await repo.getSite(siteKey);
+  if (!site) return null;
+  const path = pagePath(clip(rawPath, 300));
+  const rows = (await repo.listPageDays(siteKey, from, to)).filter((row) => row.path === path);
+  const sources: CountMap = {};
+  const devices: CountMap = {};
+  const countries: CountMap = {};
+  let pageviews = 0;
+  let visitors = 0;
+  let entrances = 0;
+  let durationMs = 0;
+  let durationCount = 0;
+  const byDate = new Map<string, { pageviews: number; visitors: number }>();
+  for (const row of rows) {
+    pageviews += row.pageviews ?? 0;
+    visitors += row.visitors ?? 0;
+    entrances += row.entrances ?? 0;
+    durationMs += row.durationMs ?? 0;
+    durationCount += row.durationCount ?? 0;
+    mergeCounts(sources, row.sources);
+    mergeCounts(devices, row.devices);
+    mergeCounts(countries, row.countries);
+    const day = byDate.get(row.date) ?? { pageviews: 0, visitors: 0 };
+    day.pageviews += row.pageviews ?? 0;
+    day.visitors += row.visitors ?? 0;
+    byDate.set(row.date, day);
+  }
+  return {
+    site,
+    path,
+    from,
+    to,
+    pageviews,
+    visitors,
+    entrances,
+    durationMs,
+    durationCount,
+    sources: slices(sources),
+    devices: slices(devices),
+    countries: slices(countries),
+    days: datesBetween(from, to).map((date) => ({
+      date,
+      pageviews: byDate.get(date)?.pageviews ?? 0,
+      visitors: byDate.get(date)?.visitors ?? 0,
+    })),
+  };
 }
 
 const MARKS = new Set(["valid", "review", "invalid"]);
@@ -347,14 +429,62 @@ export async function collectEvent(repo: Repo, raw: unknown, meta: CollectMeta):
   visitor.countedDay = today;
   visitor.rateWindowMinute = minute;
   visitor.rateCount = existing && existing.rateWindowMinute === minute ? existing.rateCount + 1 : 1;
+  const normalizedPath = pagePath(path);
+  const countVisitor = rememberPage(visitor, today, normalizedPath);
   await repo.putVisitor(visitor);
 
   site.pageviewCount += 1;
   if (!existing) site.visitorCount += 1;
   await repo.putSite(site);
   await repo.addDaily(siteKey, today, 1, countUnique ? 1 : 0, ttlAfter(DAILY_TTL_DAYS, now));
-  await repo.addPageDay(siteKey, today, pagePath(path), 1, ttlAfter(DAILY_TTL_DAYS, now));
+  const sources: CountMap = {};
+  const devices: CountMap = {};
+  const countries: CountMap = {};
+  if (countVisitor) {
+    addCount(sources, visitor.trafficSource || "direct");
+    addCount(devices, breakdownKey(visitor.device));
+    addCount(countries, breakdownKey(visitor.country));
+  }
+  await repo.addPageDay(
+    siteKey,
+    today,
+    normalizedPath,
+    {
+      pageviews: 1,
+      visitors: countVisitor ? 1 : 0,
+      entrances: newVisit ? 1 : 0,
+      sources,
+      devices,
+      countries,
+    },
+    ttlAfter(DAILY_TTL_DAYS, now),
+  );
   return { ok: true };
+}
+
+function pageToken(path: string): string {
+  return createHash("sha1").update(path).digest("hex").slice(0, 8);
+}
+
+function rememberPage(visitor: VisitorRecord, today: string, path: string): boolean {
+  const token = pageToken(path);
+  const seen = new Set(
+    visitor.countedPageDay === today ? (visitor.countedPaths ?? "").split(",").filter(Boolean) : [],
+  );
+  visitor.countedPageDay = today;
+  if (seen.has(token)) {
+    visitor.countedPaths = [...seen].join(",");
+    return false;
+  }
+  const next = [...seen, token];
+  visitor.countedPaths = (next.length > 80 ? next.slice(next.length - 80) : next).join(",");
+  return true;
+}
+
+function breakdownKey(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed || trimmed === "—") return "unknown";
+  return trimmed;
 }
 
 async function applyPageLeave(
@@ -373,9 +503,20 @@ async function applyPageLeave(
   const recent = await repo.listEvents(input.siteKey, input.visitorId, 40, "desc");
   const event = recent.find((item) => item.eventId === input.eventId);
   if (!event) return;
+  const firstMeasure = event.durationMs < 0;
   const previous = event.durationMs >= 0 ? event.durationMs : 0;
   event.durationMs = durationMs;
   await repo.saveEvent(event);
+  const delta = durationMs - previous;
+  if (firstMeasure || delta !== 0) {
+    await repo.addPageDay(
+      input.siteKey,
+      dayKey(new Date(event.occurredAt)),
+      pagePath(event.path),
+      { durationMs: delta, durationCount: firstMeasure ? 1 : 0 },
+      ttlAfter(DAILY_TTL_DAYS, input.now),
+    );
+  }
 
   const visitor = await repo.getVisitor(input.siteKey, input.visitorId);
   if (!visitor) return;

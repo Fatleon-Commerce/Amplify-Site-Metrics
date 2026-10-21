@@ -51,6 +51,13 @@ export function dayKey(date: Date): string {
   }).format(date);
 }
 
+export function nextDayKey(date: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
+  if (!match) return date;
+  const next = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]) + 1));
+  return next.toISOString().slice(0, 10);
+}
+
 export function recentDayKeys(count: number, now: Date): string[] {
   const keys: string[] = [];
   for (let offset = count - 1; offset >= 0; offset -= 1) {

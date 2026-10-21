@@ -1,9 +1,11 @@
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { touchPageDay } from "./page-day";
 import type {
   DailyRecord,
   EventRecord,
   MessageRecord,
+  PageDayDelta,
   PageDayRecord,
   PostRate,
   Repo,
@@ -184,14 +186,9 @@ export class FileRepo implements Repo {
     return data.days.filter((day) => day.siteKey === siteKey && wanted.has(day.date));
   }
 
-  async addPageDay(siteKey: string, date: string, path: string, pageviews: number, ttl: number): Promise<void> {
+  async addPageDay(siteKey: string, date: string, path: string, delta: PageDayDelta, ttl: number): Promise<void> {
     const data = await this.read();
-    const current = data.pages.find((page) => page.siteKey === siteKey && page.date === date && page.path === path);
-    if (!current) data.pages.push({ siteKey, date, path, pageviews, ttl });
-    else {
-      current.pageviews += pageviews;
-      current.ttl = ttl;
-    }
+    touchPageDay(data.pages, siteKey, date, path, delta, ttl);
     await this.write(data);
   }
 

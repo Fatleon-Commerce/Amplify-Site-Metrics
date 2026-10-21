@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { dayKey, isDayKey, isSiteKey, recentDayKeys } from "@/server/metrics/ids";
+import { isSiteKey } from "@/server/metrics/ids";
 import { requireAdmin } from "@/server/http";
+import { PageFilters } from "./filters";
+import { pageDetailHref, selectedRange } from "./range";
 
 export const dynamic = "force-dynamic";
 
@@ -11,17 +13,6 @@ function pageLabel(path: string): string {
   } catch {
     return path;
   }
-}
-
-function selectedRange(search: { date?: string; range?: string }, now = new Date()) {
-  const days = recentDayKeys(7, now);
-  const today = days[days.length - 1] ?? dayKey(now);
-  const yesterday = days[days.length - 2] ?? today;
-  if (search.range === "7") {
-    return { from: days[0] ?? today, to: today, mode: "week" as const, today, yesterday };
-  }
-  const date = search.date && isDayKey(search.date) ? search.date : today;
-  return { from: date, to: date, mode: "day" as const, today, yesterday };
 }
 
 export default async function PagesPage({
@@ -39,7 +30,6 @@ export default async function PagesPage({
 
   const base = `/admin/sites/${report.site.siteKey}/pages`;
   const heading = range.mode === "week" ? `${range.from} to ${range.to}` : range.from;
-  const linkClass = (active: boolean) => (active ? "button path-btn" : "button secondary path-btn");
 
   return (
     <main className="wrap">
@@ -51,31 +41,8 @@ export default async function PagesPage({
         Pages
       </p>
       <h1>Pages</h1>
-      <p className="muted page-note">The query string is not counted separately.</p>
-      <form className="filters" action={base} method="get">
-        <input
-          key={`${range.mode}-${range.from}`}
-          type="date"
-          name="date"
-          defaultValue={range.mode === "day" ? range.from : range.today}
-          aria-label="Date"
-        />
-        <button className="secondary" type="submit">
-          Show day
-        </button>
-        <Link className={linkClass(range.mode === "day" && range.from === range.today)} href={base}>
-          Today
-        </Link>
-        <Link
-          className={linkClass(range.mode === "day" && range.from === range.yesterday)}
-          href={`${base}?date=${range.yesterday}`}
-        >
-          Yesterday
-        </Link>
-        <Link className={linkClass(range.mode === "week")} href={`${base}?range=7`}>
-          Last 7 days
-        </Link>
-      </form>
+      <p className="muted page-note">The query string is not counted separately. Open a path for sources and devices.</p>
+      <PageFilters action={base} range={range} />
       <section className="card">
         <h2>{heading}</h2>
         {report.pages.length === 0 ? (
@@ -86,13 +53,17 @@ export default async function PagesPage({
               <thead>
                 <tr>
                   <th>Path</th>
+                  <th>Visitors</th>
                   <th>Pageviews</th>
                 </tr>
               </thead>
               <tbody>
                 {report.pages.map((page) => (
                   <tr key={page.path}>
-                    <td>{pageLabel(page.path)}</td>
+                    <td>
+                      <Link href={pageDetailHref(report.site.siteKey, page.path, range)}>{pageLabel(page.path)}</Link>
+                    </td>
+                    <td>{page.visitors > 0 ? page.visitors : "—"}</td>
                     <td>{page.pageviews}</td>
                   </tr>
                 ))}

@@ -8,10 +8,14 @@ import {
   QueryCommand,
   UpdateCommand,
 } from "@aws-sdk/lib-dynamodb";
+import { nextDayKey } from "./ids";
+import { bucketKey } from "./page-day";
 import type {
+  CountMap,
   DailyRecord,
   EventRecord,
   MessageRecord,
+  PageDayDelta,
   PageDayRecord,
   PostRate,
   Repo,
@@ -29,11 +33,33 @@ function requiredNumber(item: Item, key: string): number {
   return typeof item[key] === "number" ? item[key] : Number(item[key] ?? 0);
 }
 
-function nextDateKey(date: string): string {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
-  if (!match) return date;
-  const next = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]) + 1));
-  return next.toISOString().slice(0, 10);
+function countsFrom(item: Item, prefix: string): CountMap {
+  const counts: CountMap = {};
+  for (const [key, value] of Object.entries(item)) {
+    if (!key.startsWith(prefix)) continue;
+    const name = key.slice(prefix.length);
+    const amount = typeof value === "number" ? value : Number(value);
+    if (!name || !Number.isFinite(amount) || amount === 0) continue;
+    counts[name] = amount;
+  }
+  return counts;
+}
+
+function pageFrom(item: Item, siteKey: string): PageDayRecord {
+  return {
+    siteKey: requiredString(item, "siteKey") || siteKey,
+    date: requiredString(item, "date"),
+    path: requiredString(item, "path"),
+    pageviews: requiredNumber(item, "pageviews"),
+    visitors: requiredNumber(item, "visitors"),
+    entrances: requiredNumber(item, "entrances"),
+    durationMs: requiredNumber(item, "durationMs"),
+    durationCount: requiredNumber(item, "durationCount"),
+    sources: countsFrom(item, "src#"),
+    devices: countsFrom(item, "dev#"),
+    countries: countsFrom(item, "cty#"),
+    ttl: requiredNumber(item, "ttl"),
+  };
 }
 
 function siteFrom(item: Item): SiteRecord {
@@ -95,6 +121,8 @@ function visitorFrom(item: Item): VisitorRecord {
     currentSessionId: requiredString(item, "currentSessionId"),
     activeMs: requiredNumber(item, "activeMs"),
     countedDay: requiredString(item, "countedDay"),
+    countedPageDay: requiredString(item, "countedPageDay"),
+    countedPaths: requiredString(item, "countedPaths"),
     ttl: requiredNumber(item, "ttl"),
     rateWindowMinute: requiredNumber(item, "rateWindowMinute"),
     rateCount: requiredNumber(item, "rateCount"),
@@ -320,22 +348,53 @@ export class DynamoRepo implements Repo {
     }));
   }
 
-  async addPageDay(siteKey: string, date: string, path: string, pageviews: number, ttl: number): Promise<void> {
+  async addPageDay(siteKey: string, date: string, path: string, delta: PageDayDelta, ttl: number): Promise<void> {
+    const names: Record<string, string> = { "#date": "date", "#path": "path", "#ttl": "ttl" };
+    const values: Record<string, unknown> = {
+      ":siteKey": siteKey,
+      ":date": date,
+      ":path": path,
+      ":ttl": ttl,
+      ":entity": "page",
+    };
+    const adds: string[] = [];
+    let index = 0;
+    const addNumber = (attribute: string, amount: number | undefined) => {
+      if (!amount) return;
+      const name = `#n${index}`;
+      const value = `:v${index}`;
+      names[name] = attribute;
+      values[value] = amount;
+      adds.push(`${name} ${value}`);
+      index += 1;
+    };
+    const addMap = (prefix: string, counts: CountMap | undefined) => {
+      const merged: CountMap = {};
+      for (const [key, amount] of Object.entries(counts ?? {})) {
+        if (!Number.isFinite(amount) || amount === 0) continue;
+        const name = bucketKey(key);
+        merged[name] = (merged[name] ?? 0) + amount;
+      }
+      for (const [key, amount] of Object.entries(merged)) addNumber(`${prefix}${key}`, amount);
+    };
+
+    addNumber("pageviews", delta.pageviews);
+    addNumber("visitors", delta.visitors);
+    addNumber("entrances", delta.entrances);
+    addNumber("durationMs", delta.durationMs);
+    addNumber("durationCount", delta.durationCount);
+    addMap("src#", delta.sources);
+    addMap("dev#", delta.devices);
+    addMap("cty#", delta.countries);
+    if (adds.length === 0) return;
+
     await this.client.send(
       new UpdateCommand({
         TableName: this.tableName,
         Key: { pk: `PAGE#${siteKey}`, sk: `${date}#${path}` },
-        UpdateExpression:
-          "ADD pageviews :pageviews SET siteKey = :siteKey, #date = :date, #path = :path, #ttl = if_not_exists(#ttl, :ttl), entity = :entity",
-        ExpressionAttributeNames: { "#date": "date", "#path": "path", "#ttl": "ttl" },
-        ExpressionAttributeValues: {
-          ":pageviews": pageviews,
-          ":siteKey": siteKey,
-          ":date": date,
-          ":path": path,
-          ":ttl": ttl,
-          ":entity": "page",
-        },
+        UpdateExpression: `ADD ${adds.join(", ")} SET siteKey = :siteKey, #date = :date, #path = :path, #ttl = if_not_exists(#ttl, :ttl), entity = :entity`,
+        ExpressionAttributeNames: names,
+        ExpressionAttributeValues: values,
       }),
     );
   }
@@ -347,18 +406,10 @@ export class DynamoRepo implements Repo {
       ExpressionAttributeValues: {
         ":pk": `PAGE#${siteKey}`,
         ":start": `${from}#`,
-        ":end": `${nextDateKey(to)}#`,
+        ":end": `${nextDayKey(to)}#`,
       },
     });
-    return items
-      .map((item) => ({
-        siteKey: requiredString(item, "siteKey") || siteKey,
-        date: requiredString(item, "date"),
-        path: requiredString(item, "path"),
-        pageviews: requiredNumber(item, "pageviews"),
-        ttl: requiredNumber(item, "ttl"),
-      }))
-      .filter((page) => page.date >= from && page.date <= to && page.path);
+    return items.map((item) => pageFrom(item, siteKey)).filter((page) => page.date >= from && page.date <= to && page.path);
   }
 
   async listMessages(siteKey: string, limit: number): Promise<MessageRecord[]> {

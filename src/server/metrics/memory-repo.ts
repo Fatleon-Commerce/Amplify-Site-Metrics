@@ -1,7 +1,9 @@
+import { touchPageDay } from "./page-day";
 import type {
   DailyRecord,
   EventRecord,
   MessageRecord,
+  PageDayDelta,
   PageDayRecord,
   PostRate,
   Repo,
@@ -131,14 +133,8 @@ export class MemoryRepo implements Repo {
     return this.data.days.filter((day) => day.siteKey === siteKey && wanted.has(day.date));
   }
 
-  async addPageDay(siteKey: string, date: string, path: string, pageviews: number, ttl: number): Promise<void> {
-    const current = this.data.pages.find((page) => page.siteKey === siteKey && page.date === date && page.path === path);
-    if (!current) {
-      this.data.pages.push({ siteKey, date, path, pageviews, ttl });
-      return;
-    }
-    current.pageviews += pageviews;
-    current.ttl = ttl;
+  async addPageDay(siteKey: string, date: string, path: string, delta: PageDayDelta, ttl: number): Promise<void> {
+    touchPageDay(this.data.pages, siteKey, date, path, delta, ttl);
   }
 
   async listPageDays(siteKey: string, from: string, to: string): Promise<PageDayRecord[]> {

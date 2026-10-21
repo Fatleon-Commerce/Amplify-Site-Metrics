@@ -12,6 +12,7 @@ import {
   listSiteSummaries,
   loadDetail,
   loadOverview,
+  loadPageDetail,
   loadPageReport,
   loadVisitors,
   loginWithPassword,
@@ -163,6 +164,16 @@ export const handler = async (event: FunctionUrlEvent) => {
       const report = await loadPageReport(store(), siteKey, from, to);
       if (!report) return respond(404, { ok: false, error: "Unknown site" });
       return respond(200, { ok: true, report });
+    }
+
+    if (op === "page") {
+      const siteKey = typeof body.siteKey === "string" ? body.siteKey : "";
+      const path = typeof body.path === "string" ? body.path : "";
+      const from = typeof body.from === "string" ? body.from : "";
+      const to = typeof body.to === "string" ? body.to : "";
+      const page = await loadPageDetail(store(), siteKey, path, from, to);
+      if (!page) return respond(404, { ok: false, error: "Unknown site" });
+      return respond(200, { ok: true, page });
     }
 
     if (op === "visitors") {

@@ -5,7 +5,7 @@ import path from "node:path";
 import test from "node:test";
 import { loadBoardMessages, postBoard, setGuestbookEnabled } from "./board";
 import { FileRepo } from "./file-repo";
-import { collectEvent, createNamedSite, loadDetail, removeSite } from "./service";
+import { collectEvent, createNamedSite, loadDetail, loadPageDetail, removeSite } from "./service";
 import { signBoardStamp } from "./token";
 
 test("file repo keeps a pageview across instances", async () => {
@@ -36,6 +36,11 @@ test("file repo keeps a pageview across instances", async () => {
     const detail = await loadDetail(reloaded, created.siteKey, "visitor1234567890abcd");
     assert.equal(detail?.events[0]?.path, "/hello");
     assert.equal(detail?.visitor.country, "JP");
+    const page = await loadPageDetail(reloaded, created.siteKey, "/hello", "2026-10-16", "2026-10-16");
+    assert.equal(page?.visitors, 1);
+    assert.equal(page?.sources[0]?.key, "direct");
+    assert.equal(page?.countries[0]?.key, "JP");
+    assert.equal(page?.devices[0]?.key, "unknown");
 
     await setGuestbookEnabled(repo, created.siteKey, true);
     const stamp = signBoardStamp("secret-pass", created.siteKey, now.getTime() - 5000);
