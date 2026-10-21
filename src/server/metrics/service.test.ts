@@ -243,6 +243,16 @@ test("page detail splits visitors by source, device, and country", async () => {
     { key: "CN", count: 1 },
     { key: "US", count: 1 },
   ]);
+  const allPages = await loadPageReport(repo, siteKey, "2026-10-16", "2026-10-16");
+  assert.deepEqual(allPages?.devices, [
+    { key: "macOS · Chrome", count: 2 },
+    { key: "iOS · Safari", count: 1 },
+  ]);
+  assert.deepEqual(allPages?.sources, [
+    { key: "baidu", count: 1 },
+    { key: "direct", count: 1 },
+    { key: "google", count: 1 },
+  ]);
 
   await collectEvent(
     repo,

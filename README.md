@@ -8,6 +8,8 @@ It records pageviews, visitors, referrers, devices, and time on page. The tracke
 
 ![Admin daily summary and visitor list](docs/admin-overview.png)
 
+![Page source pie chart, devices, and countries](docs/page-sources.png)
+
 - One script tag records pageviews and follows client-side navigation
 - The admin shows daily visitors, the last 7 days, and a per-page source pie chart with device, country, entrances, and average stay
 - Each visitor has a landing page, path, region, language, UTM tags, and a private note

@@ -153,6 +153,9 @@ export type PageReport = {
   from: string;
   to: string;
   pages: Array<{ path: string; pageviews: number; visitors: number }>;
+  sources: PageSlice[];
+  devices: PageSlice[];
+  countries: PageSlice[];
 };
 
 export type VisitorDetail = {

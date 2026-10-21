@@ -198,17 +198,31 @@ export async function loadPageReport(
   if (!site) return null;
   const rows = await repo.listPageDays(siteKey, from, to);
   const totals = new Map<string, { pageviews: number; visitors: number }>();
+  const sources: CountMap = {};
+  const devices: CountMap = {};
+  const countries: CountMap = {};
   for (const row of rows) {
     const current = totals.get(row.path) ?? { pageviews: 0, visitors: 0 };
     current.pageviews += row.pageviews ?? 0;
     current.visitors += row.visitors ?? 0;
     totals.set(row.path, current);
+    mergeCounts(sources, row.sources);
+    mergeCounts(devices, row.devices);
+    mergeCounts(countries, row.countries);
   }
   const pages = [...totals.entries()]
     .map(([path, total]) => ({ path, pageviews: total.pageviews, visitors: total.visitors }))
     .filter((page) => page.pageviews > 0)
     .sort((a, b) => b.pageviews - a.pageviews || a.path.localeCompare(b.path));
-  return { site, from, to, pages };
+  return {
+    site,
+    from,
+    to,
+    pages,
+    sources: slices(sources),
+    devices: slices(devices),
+    countries: slices(countries),
+  };
 }
 
 function datesBetween(from: string, to: string): string[] {
