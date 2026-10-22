@@ -55,7 +55,7 @@ export default async function PagesPage({
       </p>
       <h1>Pages</h1>
       <p className="muted page-note">
-        The query string is not counted separately. Totals count a person once on each page per day. Open a path for that page alone.
+        The query string is not counted separately. Totals count a person once on each page per day. View detail opens that page alone.
       </p>
       <PageFilters action={base} range={range} />
       {report.pages.length > 0 && !hasMix ? (
@@ -107,16 +107,22 @@ export default async function PagesPage({
                   <th>Path</th>
                   <th>Visitors</th>
                   <th>Pageviews</th>
+                  <th className="detail-cell">
+                    <span className="sr-only">Detail</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {report.pages.map((page) => (
                   <tr key={page.path}>
-                    <td>
-                      <Link href={pageDetailHref(report.site.siteKey, page.path, range)}>{pageLabel(page.path)}</Link>
-                    </td>
+                    <td>{pageLabel(page.path)}</td>
                     <td>{page.visitors > 0 ? page.visitors : "—"}</td>
                     <td>{page.pageviews}</td>
+                    <td className="detail-cell">
+                      <Link href={pageDetailHref(report.site.siteKey, page.path, range)} className="button secondary">
+                        View detail
+                      </Link>
+                    </td>
                   </tr>
                 ))}
               </tbody>

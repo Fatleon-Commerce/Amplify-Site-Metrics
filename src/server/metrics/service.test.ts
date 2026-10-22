@@ -7,6 +7,7 @@ import {
   collectEvent,
   createNamedSite,
   listSiteSummaries,
+  moveSite,
   loadDetail,
   loadOverview,
   loadPageDetail,
@@ -345,6 +346,45 @@ test("traffic source and device labels", () => {
     ),
     "Windows · Edge",
   );
+});
+
+test("moving a site stores the new order and new sites stay first", async () => {
+  const repo = new MemoryRepo();
+  const older = await createNamedSite(repo, "Older", new Date("2026-10-16T00:00:00.000Z"));
+  const newer = await createNamedSite(repo, "Newer", new Date("2026-10-16T01:00:00.000Z"));
+  assert.equal(older.ok && newer.ok, true);
+  if (!older.ok || !newer.ok) return;
+
+  const before = await listSiteSummaries(repo, NOW);
+  assert.deepEqual(
+    before.map((item) => item.name),
+    ["Newer", "Older"],
+  );
+
+  assert.deepEqual(await moveSite(repo, newer.siteKey, "down"), { ok: true });
+  const after = await listSiteSummaries(repo, NOW);
+  assert.deepEqual(
+    after.map((item) => item.name),
+    ["Older", "Newer"],
+  );
+
+  assert.deepEqual(await moveSite(repo, older.siteKey, "up"), { ok: true });
+  const still = await listSiteSummaries(repo, NOW);
+  assert.deepEqual(
+    still.map((item) => item.name),
+    ["Older", "Newer"],
+  );
+
+  const created = await createNamedSite(repo, "Newest", new Date("2026-10-16T02:00:00.000Z"));
+  assert.equal(created.ok, true);
+  const withNew = await listSiteSummaries(repo, NOW);
+  assert.deepEqual(
+    withNew.map((item) => item.name),
+    ["Newest", "Older", "Newer"],
+  );
+
+  const missing = await moveSite(repo, "missing1", "up");
+  assert.equal(missing.ok, false);
 });
 
 test("tracker script carries the site key and collect endpoint", () => {

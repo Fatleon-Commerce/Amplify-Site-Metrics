@@ -40,8 +40,8 @@ export function GuestbookAdmin({
     <section className="card guestbook">
       <div className="spread section-head">
         <h2>Guestbook</h2>
-        <div className="row">
-          <span className="muted">{on ? "On" : "Off"}</span>
+        <div className="guestbook-toggle">
+          <span className="guestbook-state">{on ? "On" : "Off"}</span>
           <button
             type="button"
             className={on ? "secondary" : undefined}

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { CreateSiteForm } from "@/components/CreateSiteForm";
+import { SiteOrderButtons } from "@/components/SiteOrderButtons";
 import { requireAdmin, publicOrigin } from "@/server/http";
 
 export const dynamic = "force-dynamic";
@@ -18,7 +19,7 @@ export default async function SitesPage() {
         <p className="muted">No sites yet.</p>
       ) : (
         <div className="card table-wrap">
-          <table>
+          <table className="sites-table">
             <thead>
               <tr>
                 <th>Name</th>
@@ -26,10 +27,13 @@ export default async function SitesPage() {
                 <th>Visitors today</th>
                 <th>Total pageviews</th>
                 <th>Script</th>
+                <th className="order-cell">
+                  <span className="sr-only">Order</span>
+                </th>
               </tr>
             </thead>
             <tbody>
-              {sites.map((site) => (
+              {sites.map((site, index) => (
                 <tr key={site.siteKey}>
                   <td>
                     <Link href={`/admin/sites/${site.siteKey}`}>{site.name}</Link>
@@ -40,6 +44,9 @@ export default async function SitesPage() {
                   <td>{site.pageviewCount}</td>
                   <td className="mono path" title={`${origin}/${site.siteKey}.js`}>
                     {origin}/{site.siteKey}.js
+                  </td>
+                  <td className="order-cell">
+                    <SiteOrderButtons siteKey={site.siteKey} index={index} count={sites.length} />
                   </td>
                 </tr>
               ))}

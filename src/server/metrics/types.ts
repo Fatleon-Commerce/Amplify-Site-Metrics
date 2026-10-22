@@ -5,6 +5,7 @@ export type SiteRecord = {
   pageviewCount: number;
   visitorCount: number;
   guestbookEnabled: boolean;
+  sortOrder?: number;
 };
 
 export type MessageRecord = {

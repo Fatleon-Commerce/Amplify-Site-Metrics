@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { DAILY_TTL_DAYS, EVENT_TTL_DAYS, MAX_DURATION_MS, VISIT_GAP_MS } from "../../lib/constants";
 import { clip, createSiteKey, dayKey, isClientId, isDayKey, isSiteKey, nextDayKey, recentDayKeys, ttlAfter } from "./ids";
+import { nextSortOrder } from "./site-order";
 import { addCount, mergeCounts, slices } from "./page-day";
 import { clampOccurredAt, isBot, parseDevice, trafficSource } from "./parse";
 import {
@@ -119,6 +120,7 @@ export async function createNamedSite(repo: Repo, name: string, now = new Date()
     return { ok: false, error: "Enter a site name of 1 to 40 characters" };
   }
 
+  const sortOrder = nextSortOrder(await repo.listSites());
   for (let attempt = 0; attempt < 5; attempt += 1) {
     const siteKey = createSiteKey();
     const site: SiteRecord = {
@@ -128,6 +130,7 @@ export async function createNamedSite(repo: Repo, name: string, now = new Date()
       pageviewCount: 0,
       visitorCount: 0,
       guestbookEnabled: false,
+      ...(sortOrder === undefined ? {} : { sortOrder }),
     };
     try {
       await repo.createSite(site);
@@ -145,6 +148,29 @@ export async function removeSite(repo: Repo, siteKey: string): Promise<{ ok: tru
   const site = await repo.getSite(siteKey);
   if (!site) return { ok: false, error: "Unknown site" };
   await repo.deleteSite(siteKey);
+  return { ok: true };
+}
+
+export async function moveSite(
+  repo: Repo,
+  siteKey: string,
+  direction: "up" | "down",
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!isSiteKey(siteKey)) return { ok: false, error: "Unknown site" };
+  const sites = await repo.listSites();
+  const index = sites.findIndex((site) => site.siteKey === siteKey);
+  if (index === -1) return { ok: false, error: "Unknown site" };
+  const target = direction === "up" ? index - 1 : index + 1;
+  if (target < 0 || target >= sites.length) return { ok: true };
+  const ordered = sites.slice();
+  const [moved] = ordered.splice(index, 1);
+  if (!moved) return { ok: false, error: "Unknown site" };
+  ordered.splice(target, 0, moved);
+  for (let position = 0; position < ordered.length; position += 1) {
+    const site = ordered[position];
+    if (!site || site.sortOrder === position) continue;
+    await repo.putSite({ ...site, sortOrder: position });
+  }
   return { ok: true };
 }
 

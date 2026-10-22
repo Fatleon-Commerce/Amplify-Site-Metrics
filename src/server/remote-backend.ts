@@ -145,6 +145,13 @@ export class RemoteBackend implements MetricsBackend {
     });
   }
 
+  moveSite(token: string, siteKey: string, direction: "up" | "down") {
+    return this.call({ op: "moveSite", siteKey, direction }, token).then(({ json }) => {
+      if (json.ok) return { ok: true as const };
+      return { ok: false as const, error: json.error ?? "Could not move the site" };
+    });
+  }
+
   async overview(token: string, siteKey: string): Promise<Overview | null> {
     const { status, json } = await this.call({ op: "overview", siteKey }, token);
     if (status === 404) return null;

@@ -1,6 +1,7 @@
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { touchPageDay } from "./page-day";
+import { compareSites, finiteOrder } from "./site-order";
 import type {
   DailyRecord,
   EventRecord,
@@ -28,7 +29,11 @@ function empty(): Data {
 }
 
 function normalizeSite(site: SiteRecord): SiteRecord {
-  return { ...site, guestbookEnabled: site.guestbookEnabled === true };
+  const sortOrder = finiteOrder(site.sortOrder);
+  const normalized: SiteRecord = { ...site, guestbookEnabled: site.guestbookEnabled === true };
+  if (sortOrder === undefined) delete normalized.sortOrder;
+  else normalized.sortOrder = sortOrder;
+  return normalized;
 }
 
 export class FileRepo implements Repo {
@@ -95,7 +100,7 @@ export class FileRepo implements Repo {
 
   async listSites(): Promise<SiteRecord[]> {
     const data = await this.read();
-    return data.sites.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    return data.sites.slice().sort(compareSites);
   }
 
   async getVisitor(siteKey: string, visitorId: string): Promise<VisitorRecord | null> {

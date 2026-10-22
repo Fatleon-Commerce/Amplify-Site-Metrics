@@ -100,8 +100,8 @@ export default async function SitePage({
       <section className="card">
         <div className="spread section-head">
           <h2>Daily summary</h2>
-          <Link href={`/admin/sites/${overview.site.siteKey}/pages`} className="button secondary path-btn">
-            Pages
+          <Link href={`/admin/sites/${overview.site.siteKey}/pages`} className="button">
+            View detail
           </Link>
         </div>
         <div className="summary-grid">

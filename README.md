@@ -4,11 +4,21 @@ Site metrics is the web analytics app for Fatleon. It is deployed on AWS Amplify
 
 It records pageviews, visitors, referrers, devices, and time on page. The tracker and the data stay on that Amplify app.
 
+## Add it to a site
+
+Create a site in the admin, then paste the script before `</body>`:
+
+```html
+<script defer src="https://main.<app-id>.amplifyapp.com/abcd1234.js"></script>
+```
+
+`abcd1234` is that site’s key. Use “Open test page” in the admin to try it.
+
 ## Features
 
-![Admin daily summary and visitor list](docs/admin-overview.png)
-
 ![Pages totals for devices, sources, and countries](docs/page-sources.png)
+
+![Admin daily summary and visitor list](docs/admin-overview.png)
 
 - One script tag records pageviews and follows client-side navigation
 - The admin shows daily visitors, the last 7 days, and a per-page source pie chart with device, country, entrances, and average stay
@@ -53,15 +63,7 @@ After the first deploy, open:
 
 Leave the app on that hostname. A custom domain is optional and not required.
 
-## Add it to a site
 
-Create a site in the admin, then paste the script before `</body>`:
-
-```html
-<script defer src="https://main.<app-id>.amplifyapp.com/abcd1234.js"></script>
-```
-
-`abcd1234` is that site’s key. Use “Open test page” in the admin to try it.
 
 ## Run locally
 

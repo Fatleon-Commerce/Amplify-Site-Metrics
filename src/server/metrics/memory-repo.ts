@@ -1,4 +1,5 @@
 import { touchPageDay } from "./page-day";
+import { compareSites } from "./site-order";
 import type {
   DailyRecord,
   EventRecord,
@@ -50,7 +51,7 @@ export class MemoryRepo implements Repo {
   }
 
   async listSites(): Promise<SiteRecord[]> {
-    return [...this.data.sites].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    return [...this.data.sites].sort(compareSites);
   }
 
   async getVisitor(siteKey: string, visitorId: string): Promise<VisitorRecord | null> {

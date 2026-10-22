@@ -9,6 +9,7 @@ import {
   UpdateCommand,
 } from "@aws-sdk/lib-dynamodb";
 import { nextDayKey } from "./ids";
+import { compareSites, finiteOrder } from "./site-order";
 import { bucketKey } from "./page-day";
 import type {
   CountMap,
@@ -63,6 +64,7 @@ function pageFrom(item: Item, siteKey: string): PageDayRecord {
 }
 
 function siteFrom(item: Item): SiteRecord {
+  const sortOrder = finiteOrder(item.sortOrder);
   return {
     siteKey: requiredString(item, "siteKey"),
     name: requiredString(item, "name"),
@@ -70,6 +72,7 @@ function siteFrom(item: Item): SiteRecord {
     pageviewCount: requiredNumber(item, "pageviewCount"),
     visitorCount: requiredNumber(item, "visitorCount"),
     guestbookEnabled: item.guestbookEnabled === true,
+    ...(sortOrder === undefined ? {} : { sortOrder }),
   };
 }
 
@@ -204,7 +207,7 @@ export class DynamoRepo implements Repo {
       KeyConditionExpression: "pk = :pk",
       ExpressionAttributeValues: { ":pk": "SITE" },
     });
-    return items.map(siteFrom).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    return items.map(siteFrom).sort(compareSites);
   }
 
   async getVisitor(siteKey: string, visitorId: string): Promise<VisitorRecord | null> {

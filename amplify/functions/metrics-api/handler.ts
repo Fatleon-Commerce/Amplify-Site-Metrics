@@ -16,6 +16,7 @@ import {
   loadPageReport,
   loadVisitors,
   loginWithPassword,
+  moveSite,
   removeSite,
   saveVisitorNote,
   tokenIsValid,
@@ -146,6 +147,15 @@ export const handler = async (event: FunctionUrlEvent) => {
     if (op === "deleteSite") {
       const siteKey = typeof body.siteKey === "string" ? body.siteKey : "";
       const result = await removeSite(store(), siteKey);
+      if (!result.ok) return respond(404, result);
+      return respond(200, result);
+    }
+
+    if (op === "moveSite") {
+      const siteKey = typeof body.siteKey === "string" ? body.siteKey : "";
+      const direction = body.direction === "up" || body.direction === "down" ? body.direction : "";
+      if (!direction) return respond(400, { ok: false, error: "Unknown direction" });
+      const result = await moveSite(store(), siteKey, direction);
       if (!result.ok) return respond(404, result);
       return respond(200, result);
     }

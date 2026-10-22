@@ -27,6 +27,11 @@ export interface MetricsBackend {
   listSites(token: string): Promise<SiteSummary[]>;
   createSite(token: string, name: string): Promise<{ ok: true; siteKey: string } | { ok: false; error: string }>;
   deleteSite(token: string, siteKey: string): Promise<{ ok: true } | { ok: false; error: string }>;
+  moveSite(
+    token: string,
+    siteKey: string,
+    direction: "up" | "down",
+  ): Promise<{ ok: true } | { ok: false; error: string }>;
   overview(token: string, siteKey: string): Promise<Overview | null>;
   pages(token: string, siteKey: string, from: string, to: string): Promise<PageReport | null>;
   pageDetail(token: string, siteKey: string, path: string, from: string, to: string): Promise<PageDetail | null>;

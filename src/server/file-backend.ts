@@ -17,6 +17,7 @@ import {
   loadPageReport,
   loadVisitors,
   loginWithPassword,
+  moveSite as reorderSite,
   removeSite,
   saveVisitorNote,
   tokenIsValid,
@@ -98,6 +99,11 @@ export class FileBackend implements MetricsBackend {
   deleteSite(token: string, siteKey: string) {
     this.assertToken(token);
     return serial(() => removeSite(this.repo, siteKey));
+  }
+
+  moveSite(token: string, siteKey: string, direction: "up" | "down") {
+    this.assertToken(token);
+    return serial(() => reorderSite(this.repo, siteKey, direction));
   }
 
   overview(token: string, siteKey: string): Promise<Overview | null> {
