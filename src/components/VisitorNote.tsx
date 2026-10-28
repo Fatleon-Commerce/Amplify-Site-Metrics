@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 
 const MARKS = [
@@ -77,50 +78,53 @@ export function VisitorNote({
           {text}
         </span>
       ) : null}
-      {open ? (
-        <div className="note-backdrop" onClick={() => !pending && setOpen(false)}>
-          <form
-            className="note-dialog card"
-            onClick={(event) => event.stopPropagation()}
-            onSubmit={(event) => {
-              event.preventDefault();
-              void save();
-            }}
-          >
-            <h2>Visitor note</h2>
-            <p className="muted">Only you can see this. It stays on this visitor.</p>
-            <div className="marks" role="group" aria-label="Visitor mark">
-              {MARKS.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  className={picked === item.id ? `mark-choice mark-${item.id} selected` : `mark-choice mark-${item.id}`}
-                  aria-pressed={picked === item.id}
-                  onClick={() => setPicked(picked === item.id ? "" : item.id)}
-                >
-                  {item.label}
-                </button>
-              ))}
-            </div>
-            <textarea
-              value={draft}
-              maxLength={500}
-              rows={5}
-              placeholder="Where they came from, what they asked, or whether to follow up"
-              onChange={(event) => setDraft(event.target.value)}
-            />
-            {error ? <p className="error">{error}</p> : null}
-            <div className="row">
-              <button type="button" className="secondary" disabled={pending} onClick={() => setOpen(false)}>
-                Cancel
-              </button>
-              <button type="submit" disabled={pending}>
-                {pending ? "Saving…" : "Save"}
-              </button>
-            </div>
-          </form>
-        </div>
-      ) : null}
+      {open
+        ? createPortal(
+            <div className="note-backdrop" onClick={() => !pending && setOpen(false)}>
+              <form
+                className="note-dialog card"
+                onClick={(event) => event.stopPropagation()}
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void save();
+                }}
+              >
+                <h2>Visitor note</h2>
+                <p className="muted">Only you can see this. It stays on this visitor.</p>
+                <div className="marks" role="group" aria-label="Visitor mark">
+                  {MARKS.map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      className={picked === item.id ? `mark-choice mark-${item.id} selected` : `mark-choice mark-${item.id}`}
+                      aria-pressed={picked === item.id}
+                      onClick={() => setPicked(picked === item.id ? "" : item.id)}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+                <textarea
+                  value={draft}
+                  maxLength={500}
+                  rows={5}
+                  placeholder="Where they came from, what they asked, or whether to follow up"
+                  onChange={(event) => setDraft(event.target.value)}
+                />
+                {error ? <p className="error">{error}</p> : null}
+                <div className="row">
+                  <button type="button" className="secondary" disabled={pending} onClick={() => setOpen(false)}>
+                    Cancel
+                  </button>
+                  <button type="submit" disabled={pending}>
+                    {pending ? "Saving…" : "Save"}
+                  </button>
+                </div>
+              </form>
+            </div>,
+            document.body,
+          )
+        : null}
     </>
   );
 }
