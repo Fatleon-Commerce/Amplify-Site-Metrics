@@ -93,6 +93,11 @@ export function formatDuration(ms: number): string {
   }
   const hours = Math.floor(minutes / 60);
   const restMinutes = minutes % 60;
+  if (hours >= 24) {
+    const tenths = Math.round((seconds / (24 * 60 * 60)) * 10);
+    const shown = tenths % 10 === 0 ? String(tenths / 10) : (tenths / 10).toFixed(1);
+    return `${shown} ${tenths === 10 ? "day" : "days"}`;
+  }
   const hourLabel = unit(hours, "hour", "hours");
   return restMinutes ? `${hourLabel} ${unit(restMinutes, "minute", "minutes")}` : hourLabel;
 }

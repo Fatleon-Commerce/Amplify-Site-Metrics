@@ -77,7 +77,7 @@ export function VisitorTable({ visitors }: { visitors: VisitorView[] }) {
         </span>
       </div>
       <div className="table-wrap">
-        <table>
+        <table className="visitors">
           <thead>
             <tr>
               <th>Visitor</th>
@@ -107,7 +107,7 @@ export function VisitorTable({ visitors }: { visitors: VisitorView[] }) {
                     {visitor.firstSeen}
                     <span className="sub">Last seen {visitor.lastSeen}</span>
                   </td>
-                  <td>
+                  <td className="activity">
                     {visitor.spanLabel}
                     <span className="sub">
                       {visitor.stayLabel} on site · {visitor.visitCount}{" "}

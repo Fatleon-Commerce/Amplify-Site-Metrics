@@ -193,6 +193,9 @@ input:focus, select:focus, button:focus-visible {
 .section-head h2 { margin: 0; }
 .filters input[type="date"] { flex: none; width: 160px; min-width: 0; }
 .pages { width: max-content; min-width: 100%; }
+@media (min-width: 1400px) {
+  .pages { width: 100%; }
+}
 .pages th, .pages td { padding: 8px 12px; }
 .pages th:nth-child(2),
 .pages th:nth-child(3),
@@ -296,6 +299,7 @@ input:focus, select:focus, button:focus-visible {
   overflow-x: auto;
   overscroll-behavior-x: contain;
   -webkit-overflow-scrolling: touch;
+  contain: inline-size;
 }
 table { width: 100%; border-collapse: collapse; }
 th, td {
@@ -311,6 +315,34 @@ th { font-size: 13px; color: var(--muted); font-weight: 600; background: #fafbfc
 .origin { max-width: 420px; }
 .origin .sub { max-width: 420px; overflow: hidden; text-overflow: ellipsis; }
 .sub { display: block; margin-top: 2px; color: var(--muted); font-size: 12px; white-space: nowrap; }
+.visitors { width: max-content; min-width: 100%; }
+.visitors td:last-child,
+.visitors th:last-child { white-space: nowrap; }
+@media (min-width: 1400px) {
+  .visitors { width: 100%; }
+  .visitors th,
+  .visitors td,
+  .visitors .sub,
+  .visitors .origin,
+  .visitors .origin .sub,
+  .visitors .note-cell,
+  .visitors .note-preview {
+    max-width: none;
+    overflow: visible;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .visitors .mono,
+  .visitors .note-btn,
+  .visitors .path-btn,
+  .visitors td:last-child,
+  .visitors th:last-child {
+    white-space: nowrap;
+    overflow-wrap: normal;
+  }
+  .visitors td:last-child,
+  .visitors th:last-child { width: 1%; }
+}
 .note-cell { max-width: 180px; }
 .note-preview {
   max-width: 160px;
