@@ -101,6 +101,7 @@ export default async function PagesPage({
           <p className="muted">No pageviews for this period.</p>
         ) : (
           <div className="table-wrap">
+            <div className="table-wide">
             <table className="pages">
               <thead>
                 <tr>
@@ -127,6 +128,7 @@ export default async function PagesPage({
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         )}
       </section>

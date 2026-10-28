@@ -77,6 +77,7 @@ export function VisitorTable({ visitors }: { visitors: VisitorView[] }) {
         </span>
       </div>
       <div className="table-wrap">
+        <div className="table-wide">
         <table className="visitors">
           <thead>
             <tr>
@@ -139,6 +140,7 @@ export function VisitorTable({ visitors }: { visitors: VisitorView[] }) {
             )}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );

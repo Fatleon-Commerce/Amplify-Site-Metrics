@@ -115,6 +115,7 @@ export default async function SitePage({
             ))}
           </div>
           <div className="table-wrap">
+            <div className="table-wide">
             <table className="daily">
               <thead>
                 <tr>
@@ -133,6 +134,7 @@ export default async function SitePage({
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         </div>
       </section>

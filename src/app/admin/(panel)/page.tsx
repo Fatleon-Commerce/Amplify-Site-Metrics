@@ -19,6 +19,7 @@ export default async function SitesPage() {
         <p className="muted">No sites yet.</p>
       ) : (
         <div className="card table-wrap">
+          <div className="table-wide">
           <table className="sites-table">
             <thead>
               <tr>
@@ -52,6 +53,7 @@ export default async function SitesPage() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </main>
